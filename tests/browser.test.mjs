@@ -46,13 +46,15 @@ try{
  assert.equal(await page.locator('#sensor-list .device-item').count(),1);await page.locator('#sensor-list .remove').click();
  // A pre-existing v1 save keeps device IDs, connections, AI classes, notes and edited prompt.
  const legacy=sampleState();legacy.actuators[0].connections.signal='P1';legacy.prompt=generatePrompt(legacy)+'\n以前の追記';legacy.signature=inputSignature(legacy);
- await page.evaluate(({key,state})=>localStorage.setItem(key,JSON.stringify(state)),{key:STORAGE_KEY,state:legacy});
- // Navigate through a fresh page: pagehide on the old page intentionally persists its own state.
- const restored=await context.newPage();await restored.goto(base);await restored.waitForSelector('#sensor-list .device-item',{state:'attached'});
+ // Isolate this fixture from the original page's debounced auto-save timer.
+ const legacyContext=await browser.newContext({storageState:{cookies:[],origins:[{origin:new URL(base).origin,localStorage:[{name:STORAGE_KEY,value:JSON.stringify(legacy)}]}]}});
+ legacyContext.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));
+ legacyContext.on('request',r=>{if(!r.url().startsWith(new URL(base).origin))external.push(r.url());});
+ const restored=await legacyContext.newPage();await restored.goto(base);await restored.waitForSelector('#sensor-list .device-item',{state:'attached'});
  assert.equal(await restored.locator('#A-0-signal').inputValue(),'P1');
  assert.equal(await restored.locator('#classes').inputValue(),legacy.ai.classes);
  assert.equal(await restored.locator('#prompt').inputValue(),legacy.prompt);assert.equal(await restored.locator('#copy').isDisabled(),false);
- await restored.close();await page.evaluate(key=>localStorage.removeItem(key),STORAGE_KEY);
+ await legacyContext.close();
  // Complete a new project entirely through the graphical UI, including exact sound Class names.
  const manualContext=await browser.newContext();manualContext.on('request',r=>{if(!r.url().startsWith(new URL(base).origin))external.push(r.url());});manualContext.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));const manual=await manualContext.newPage();
  await manual.goto(base);await go(manual,1);await manual.locator('#purpose').fill('拍手で音を出す作品');
