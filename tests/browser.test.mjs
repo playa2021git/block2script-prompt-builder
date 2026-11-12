@@ -117,4 +117,11 @@ try{
  const corrupt=await browser.newContext();const c=await corrupt.newPage();await c.goto(base);await c.evaluate(()=>localStorage.setItem('b2s-prompt-maker-v1','{broken'));await c.reload();assert.match(await c.locator('#save-status').textContent(),/読み取れません/);await corrupt.close();
  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
  console.log('PASS: all device images/grouping, keyboard/multiple additions, connection fields, legacy storage, prompt parity, Chromebook layouts, desktop/mobile layout, S/A separation, sample, required fields, pins, AI classes, edited prompt persistence, stale-copy prevention, clipboard/fallback, storage errors, no external requests, no page errors.');
+}catch(error){
+ // Surface the actual failure in Actions annotations as well as the full log.
+ if(process.env.GITHUB_ACTIONS){
+  const message=String(error.stack||error).replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A');
+  console.error('::error title=Browser test failure::'+message);
+ }
+ throw error;
 }finally{await browser.close();}

@@ -98,4 +98,11 @@ try{
  await go(6);await page.locator('#generate').click();await page.screenshot({animations:'disabled',path:'work/workshop-prompt.png'});
  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
  console.log('PASS: workshop navigation, live S/A/AI equipment, exact Class names, editing/removal, pin conflicts, validation links, prompt parity, v1 restore, responsive columns/drawer, keyboard and reduced motion.');
+}catch(error){
+ // Surface the actual failure in Actions annotations as well as the full log.
+ if(process.env.GITHUB_ACTIONS){
+  const message=String(error.stack||error).replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A');
+  console.error('::error title=Browser test failure::'+message);
+ }
+ throw error;
 }finally{await browser.close();}
