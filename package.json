@@ -1,0 +1,14 @@
+{
+  "name": "block2script-prompt-builder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/core.test.js",
+    "dev": "node tests/serve.mjs",
+    "test:browser": "node tests/browser.test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.65.0"
+  }
+}

@@ -1,0 +1,46 @@
+name: Test and publish prompt maker
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Test the Pages subdirectory in a browser
+        run: |
+          PORT=5181 BASE_PATH=/block2script-prompt-builder/ node tests/serve.mjs &
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:5181/block2script-prompt-builder/ > /dev/null && break; sleep 1; done
+          TEST_URL=http://127.0.0.1:5181/block2script-prompt-builder/ node tests/browser.test.mjs
+      - uses: actions/configure-pages@v5
+      - name: Prepare static site
+        run: |
+          mkdir -p _site
+          cp index.html style.css app.js core.js .nojekyll _site/
+          cp -R assets data docs _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
