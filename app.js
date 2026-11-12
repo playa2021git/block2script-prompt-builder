@@ -51,8 +51,9 @@ function renderCatalog(key,group){
  }
 }
 function addDevice(deviceId,key,group,focus=true){
+ const origin=document.querySelector(`button.device-pick[data-device-id="${deviceId}"] img`)?.getBoundingClientRect();
  const item=makeItem(deviceId,crypto.randomUUID());
- state[key].push(item);editing[key]=item.id;renderList(key,group);changed();animateEquip(deviceId,item.id);
+ state[key].push(item);editing[key]=item.id;renderList(key,group);changed();animateEquip(deviceId,item.id,origin);
  const kind=group==='S'?'sensor':'actuator';
  $(kind+'-feedback').textContent=findDevice(deviceId).name+'を追加しました。中央の設定で接続を確認しよう。';
  if(focus)$('item-'+item.id).focus();
@@ -82,7 +83,7 @@ for(const [button,select,key,group]of [['add-sensor','sensor-choice','sensors','
 $('sample').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力を猫の給水サンプルに置き換えますか？'))return;state=sampleState();editing.sensors='sample-scale';editing.actuators='sample-pump';render();goStep('step1',false);changed();$('action-status').textContent='サンプルを読み込みました。ポンプの端子と未確認の条件は、自分の装置に合わせて入力しよう。';$('purpose').focus();});
 $('reset').addEventListener('click',()=>{if(!confirm('このブラウザに保存した入力と指示文を消しますか？'))return;clearTimeout(saveTimer);state=emptyState();render();goStep('step1',false);$('validation').hidden=true;try{localStorage.removeItem(STORAGE_KEY);$('save-status').textContent='保存した入力を消しました';}catch{$('save-status').textContent='保存内容を消せませんでした。ブラウザの設定を確認しよう。';}$('action-status').textContent='入力を消しました。新しいアイデアを書いてみよう。';$('purpose').focus();});
 function showIssues(result){const container=$('validation');container.replaceChildren();for(const [items,title,warning]of [[result.errors,'ここを確認してから、もう一度つくろう',false],[result.warnings,'先生やGemに確認すること（指示文にも入ります）',true]]){if(!items.length)continue;const box=el('div',warning?'issues warning':'issues'),ul=el('ul');box.append(el('p',null,title));for(const issue of items){const li=el('li'),link=el('a',null,issue.message);link.href='#'+issue.target;link.addEventListener('click',e=>{e.preventDefault();const target=issue.target==='ai-mode'?document.querySelector('[name=ai-mode]:checked'):$(issue.target);if(target)revealTarget(target);});li.append(link);ul.append(li);if(!warning){const node=$(issue.target);if(node)node.setAttribute('aria-invalid','true');}}box.append(ul);container.append(box);}container.hidden=!result.errors.length&&!result.warnings.length;}
-$('builder').addEventListener('submit',e=>{e.preventDefault();clearTimeout(saveTimer);const result=validate(state);showIssues(result);if(result.errors.length){$('action-status').textContent=`まだ指示文をつくれません。${result.errors.length}件の入力を確認しよう。`;$('validation').focus();return;}if(state.prompt&&state.signature===inputSignature(state)&&$('prompt').value!==generatePrompt(state)&&!confirm('手直しした指示文を、入力からつくり直しますか？'))return;state.prompt=generatePrompt(state);state.signature=inputSignature(state);$('prompt').value=state.prompt;updateResult();save();$('action-status').textContent=result.warnings.length?'確認が必要なことを含めて、指示文をつくりました。内容を読んでからコピーしよう。':'指示文をつくりました。内容を読んで、専用Gemへコピーしよう。';$('result').scrollIntoView({block:'nearest'});});
+$('builder').addEventListener('submit',e=>{e.preventDefault();if(activeStep!=='step6')return;clearTimeout(saveTimer);const result=validate(state);showIssues(result);if(result.errors.length){$('action-status').textContent=`まだ指示文をつくれません。${result.errors.length}件の入力を確認しよう。`;$('validation').focus();return;}if(state.prompt&&state.signature===inputSignature(state)&&$('prompt').value!==generatePrompt(state)&&!confirm('手直しした指示文を、入力からつくり直しますか？'))return;state.prompt=generatePrompt(state);state.signature=inputSignature(state);$('prompt').value=state.prompt;updateResult();save();$('action-status').textContent=result.warnings.length?'確認が必要なことを含めて、指示文をつくりました。内容を読んでからコピーしよう。':'指示文をつくりました。内容を読んで、専用Gemへコピーしよう。';$('result').scrollIntoView({block:'nearest'});});
 $('prompt').addEventListener('input',()=>{state.prompt=$('prompt').value;save();updateResult();$('action-status').textContent='指示文を手直ししています。';});
 $('copy').addEventListener('click',async()=>{if(state.signature!==inputSignature(state)||!state.prompt.trim())return;try{if(!navigator.clipboard?.writeText)throw Error();await navigator.clipboard.writeText(state.prompt);$('action-status').textContent='コピーしました！ 専用Gemに貼り付けて送信しよう。';$('copy').textContent='✓ コピーしました';setTimeout(()=>{$('copy').textContent='指示文をコピー';},2200);}catch{$('prompt').focus();$('prompt').select();$('action-status').textContent='自動でコピーできませんでした。指示文を選択しました。Ctrl＋C（スマートフォンは長押し）でコピーしよう。';}});
 window.addEventListener('pagehide',()=>{clearTimeout(saveTimer);try{if(state.purpose||state.behavior||state.sensors.length||state.actuators.length||state.prompt||state.ai.mode!=='none')localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}});
@@ -181,14 +182,14 @@ function renderEquipment(){
  }
  $('review-settings').textContent=result.errors.length?'⚠ 入力確認 '+result.errors.length+'件 · 最終チェックへ':'✓ 必須入力OK · 指示文を完成させる';
 }
-function animateEquip(deviceId,itemId){
+function animateEquip(deviceId,itemId,origin){
  $('equipment-message').textContent=findDevice(deviceId).name+'を発明セットに追加しました。';
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const card=[...document.querySelectorAll('.equipment-item')].find(n=>n.dataset.itemId===itemId);
  card?.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'ease-out'});
  $('equipment').animate([{boxShadow:'0 0 0 0 #3eb89b99'},{boxShadow:'0 0 0 8px #3eb89b00'}],{duration:650});
  const source=document.querySelector(`button.device-pick[data-device-id="${deviceId}"] img`),dest=$('equipment-title');
- if(!source)return;const from=source.getBoundingClientRect(),to=dest.getBoundingClientRect();
+ if(!source)return;const from=origin??source.getBoundingClientRect(),to=dest.getBoundingClientRect();
  if(from.bottom<0||from.top>innerHeight||to.bottom<0||to.top>innerHeight)return;
  const token=source.cloneNode();token.className='equip-token';Object.assign(token.style,{left:from.left+'px',top:from.top+'px',width:from.width+'px',height:from.height+'px'});document.body.append(token);
  const animation=token.animate([{transform:'translate(0,0) scale(1)',opacity:.8},{transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(.2)`,opacity:0}],{duration:430,easing:'ease-in'});

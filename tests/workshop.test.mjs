@@ -25,6 +25,8 @@ try{
  await pick('soil').click();assert.equal(await equip('sensors','soil').count(),1);
  assert.match(await equip('sensors','soil').textContent(),/未設定/);
  await selectPin('P1');assert.match(await equip('sensors','soil').textContent(),/P1/);
+ await page.locator('.device-item:visible .device-memo').fill('水やり用');await page.locator('.device-item:visible .device-memo').press('Enter');
+ assert.equal(await page.locator('#step2').isVisible(),true);assert.equal(await page.locator('#prompt').inputValue(),'');
  assert.match(await equip('sensors','soil').locator('.equipment-status').textContent(),/入力済み/);
  await go(3);assert.equal(await page.locator('#sensor-catalog').isVisible(),false);
  await pick('pump').click();await selectPin('P1');
