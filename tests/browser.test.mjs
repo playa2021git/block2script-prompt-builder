@@ -29,10 +29,11 @@ try{
  await go(page,2);const buttons=page.locator('button.device-pick[data-device-id=buttons]');await buttons.focus();await page.keyboard.press('Enter');
  assert.equal(await page.locator('#sensor-list .device-item').count(),1);
  assert.equal(await page.locator('#sensor-list .connection-fields').count(),0);
- await page.keyboard.press('Space');assert.equal(await page.locator('#sensor-list .device-item').count(),2);
- assert.match(await buttons.textContent(),/2個選択中/);
- await page.locator('#equipped-sensors .equipment-actions button').filter({hasText:'外す'}).first().click();assert.equal(await page.locator('#sensor-list .device-item').count(),1);
- await page.locator('#sensor-list .remove').click();
+ await page.keyboard.press('Space');assert.equal(await page.locator('#sensor-list .device-item').count(),1);
+ assert.match(await buttons.textContent(),/選択済み/);
+ assert.equal(await page.locator('#equipped-sensors .equipment-highlight').count(),1);
+ await page.locator('#equipped-sensors .equipment-actions button').filter({hasText:'外す'}).click();
+ assert.equal(await page.locator('#sensor-list .device-item').count(),0);
  for(const d of DEVICES){
   await go(page,d.group==='S'?2:3);await page.locator(`button.device-pick[data-device-id="${d.id}"]`).click();
   const selected=page.locator(`#${d.group==='S'?'sensor':'actuator'}-list .device-item`).last();

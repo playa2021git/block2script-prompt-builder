@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test tests/core.test.js",
     "dev": "node tests/serve.mjs",
-    "test:browser": "node tests/browser.test.mjs && node tests/workshop.test.mjs"
+    "test:browser": "node tests/browser.test.mjs && node tests/workshop.test.mjs && node tests/gem-modes.test.mjs"
   },
   "devDependencies": {
     "playwright": "1.65.0"

@@ -1483,3 +1483,4 @@ footer b {
     font-size:13px
   }
 }
+.prompt-mode {border:1px solid #c8dccd;border-radius:10px;padding:14px;margin:18px 0}.prompt-mode legend{font-size:14px;font-weight:700}.prompt-mode label{display:flex;align-items:start;gap:9px;padding:10px;border:1px solid #dce6dc;border-radius:8px;margin:8px 0;cursor:pointer}.prompt-mode label:has(input:checked){background:#edf5df;border-color:#649a6a}.prompt-mode input{margin-top:5px;accent-color:var(--green)}.prompt-mode small{display:block;font-size:12px;font-weight:400;margin-top:4px}.equipment-highlight{outline:3px solid #5f971f;outline-offset:2px}.equipment-issues.input,.equipment-input-help{color:#9b4326}.equipment-issues.support{color:#7357a1}.equipment-issues.wiring{color:#6a7052}.equipment-issues.duplicate{color:#9b4326}.equipment-input-help{font-size:11px;grid-column:1/-1}

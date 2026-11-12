@@ -31,7 +31,7 @@ try{
  await go(3);assert.equal(await page.locator('#sensor-catalog').isVisible(),false);
  await pick('pump').click();await selectPin('P1');
  assert.match(await equip('actuators','pump').locator('.equipment-status').textContent(),/入力を確認/);
- assert.match(await equip('actuators','pump').locator('.equipment-issues').textContent(),/P1.*重複/);
+ assert.match(await equip('actuators','pump').locator('.equipment-issues.input').textContent(),/P1.*重複/);
  await selectPin('P2');assert.match(await equip('actuators','pump').locator('.equipment-status').textContent(),/入力済み/);
  // Equipment editing opens the exact device and step, even from the final stage.
  await go(6);await equip('sensors','soil').getByRole('button',{name:/編集/}).click();
