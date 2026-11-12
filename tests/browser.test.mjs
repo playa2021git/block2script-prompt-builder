@@ -2,6 +2,8 @@ import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
+import {DEVICES} from '../data/devices.js';
+import {sampleState,generatePrompt,inputSignature,STORAGE_KEY,emptyState,makeItem} from '../core.js';
 const base=process.env.TEST_URL||'http://127.0.0.1:5180/';
 const browser=await chromium.launch({executablePath:process.env.BROWSER_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),headless:true,args:['--no-sandbox']});
 const context=await browser.newContext({viewport:{width:1366,height:960},permissions:['clipboard-read','clipboard-write']});
@@ -11,18 +13,83 @@ context.on('request',r=>{if(!r.url().startsWith(new URL(base).origin))external.p
 await mkdir('work',{recursive:true});
 try{
  await page.goto(base);await page.waitForSelector('#sensor-choice optgroup',{state:'attached'});
+ // Every catalogue image must match its device, load locally, and stay in its S/A group.
+ assert.equal(await page.locator('.device-pick').count(),DEVICES.length);
+ for(const d of DEVICES){
+  const tile=page.locator(`#${d.group==='S'?'sensor':'actuator'}-catalog button[data-device-id="${d.id}"]`);
+  assert.equal(await tile.count(),1);assert.ok((await tile.textContent()).includes(d.name));
+  assert.match(await tile.locator('img').getAttribute('src'),new RegExp('/'+d.id+'\\.(svg|webp)$'));
+  assert.ok((await tile.locator('img').getAttribute('alt')).includes(d.name));
+ }
+ await page.evaluate(async()=>{for(const img of document.images)img.loading='eager';await Promise.all([...document.images].map(img=>img.decode()));});
+ assert.equal(await page.locator('img').evaluateAll(imgs=>imgs.every(i=>i.complete&&i.naturalWidth>0)),true);
+ // Keyboard addition, repeated devices, removal, and built-in/external connection fields.
+ const buttons=page.locator('button.device-pick[data-device-id=buttons]');await buttons.focus();await page.keyboard.press('Enter');
+ assert.equal(await page.locator('#sensor-list .device-item').count(),1);
+ assert.equal(await page.locator('#sensor-list .connection-fields').count(),0);
+ await page.keyboard.press('Space');assert.equal(await page.locator('#sensor-list .device-item').count(),2);
+ assert.match(await buttons.textContent(),/2個選択中/);
+ await page.locator('#sensor-list .remove').first().click();assert.equal(await page.locator('#sensor-list .device-item').count(),1);
+ await page.locator('#sensor-list .remove').click();
+ for(const d of DEVICES){
+  await page.locator(`button.device-pick[data-device-id="${d.id}"]`).click();
+  const selected=page.locator(`#${d.group==='S'?'sensor':'actuator'}-list .device-item`).last();
+  assert.equal(await selected.locator('.connection-fields input,.connection-fields select').count(),d.fields.length);
+  assert.equal(await selected.locator('img').getAttribute('src'),await page.locator(`button.device-pick[data-device-id="${d.id}"] img`).getAttribute('src'));
+  await selected.locator('.remove').click();
+ }
+ // Image failure leaves the named native button usable.
+ await buttons.locator('img').evaluate(img=>img.src='data:image/png;base64,');await buttons.click();
+ assert.equal(await page.locator('#sensor-list .device-item').count(),1);await page.locator('#sensor-list .remove').click();
+ // A pre-existing v1 save keeps device IDs, connections, AI classes, notes and edited prompt.
+ const legacy=sampleState();legacy.actuators[0].connections.signal='P1';legacy.prompt=generatePrompt(legacy)+'\n以前の追記';legacy.signature=inputSignature(legacy);
+ await page.evaluate(({key,state})=>localStorage.setItem(key,JSON.stringify(state)),{key:STORAGE_KEY,state:legacy});
+ // Navigate through a fresh page: pagehide on the old page intentionally persists its own state.
+ const restored=await context.newPage();await restored.goto(base);await restored.waitForSelector('#sensor-list .device-item');
+ assert.equal(await restored.locator('#A-0-signal').inputValue(),'P1');
+ assert.equal(await restored.locator('#classes').inputValue(),legacy.ai.classes);
+ assert.equal(await restored.locator('#prompt').inputValue(),legacy.prompt);assert.equal(await restored.locator('#copy').isDisabled(),false);
+ await restored.close();await page.evaluate(key=>localStorage.removeItem(key),STORAGE_KEY);
+ // Complete a new project entirely through the graphical UI, including exact sound Class names.
+ const manualContext=await browser.newContext();manualContext.on('request',r=>{if(!r.url().startsWith(new URL(base).origin))external.push(r.url());});manualContext.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));const manual=await manualContext.newPage();
+ await manual.goto(base);await manual.locator('#purpose').fill('拍手で音を出す作品');
+ await manual.locator('button.device-pick[data-device-id=buttons]').click();
+ await manual.locator('button.device-pick[data-device-id=speaker]').click();
+ assert.match(await manual.locator('#actuator-list').textContent(),/micro:bit V2内蔵スピーカー/);
+ await manual.locator('[name=ai-mode][value=sound]').check();
+ await manual.locator('#classes').fill(' Clap \nquiet');
+ await manual.locator('#model-url').fill('https://teachablemachine.withgoogle.com/models/example/');
+ await manual.locator('#behavior').fill('拍手を認識したら音を鳴らす。ボタンAで止める。');
+ await manual.locator('#generate').click();
+ const manualState=emptyState();manualState.purpose='拍手で音を出す作品';
+ manualState.sensors=[makeItem('buttons','manual-s')];manualState.actuators=[makeItem('speaker','manual-a')];
+ manualState.ai={mode:'sound',classes:' Clap \nquiet',url:'https://teachablemachine.withgoogle.com/models/example/'};
+ manualState.behavior='拍手を認識したら音を鳴らす。ボタンAで止める。';
+ assert.equal(await manual.locator('#prompt').inputValue(),generatePrompt(manualState));
+ await manual.locator('[name=ai-mode][value=pose]').check();assert.match(await manual.locator('#ai-support').textContent(),/未確認/);
+ await manualContext.close();
+ // Chromebook and narrow layouts must not overflow or overlap cards.
+ for(const width of [1366,1024,768,390]){
+  await page.setViewportSize({width,height:900});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  const boxes=await page.locator('#sensor-catalog .device-tile').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));
+  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++)assert.ok(boxes[i].right<=boxes[j].x+1||boxes[j].right<=boxes[i].x+1||boxes[i].bottom<=boxes[j].y+1||boxes[j].bottom<=boxes[i].y+1);
+  if(width===1024)await page.screenshot({path:'work/chromebook-catalog.png',fullPage:true});
+ }
+ await page.setViewportSize({width:1366,height:960});
  assert.equal(await page.locator('#sensor-choice option').filter({hasText:'ポンプ'}).count(),0);
  assert.equal(await page.locator('#actuator-choice option').filter({hasText:'センサ'}).count(),0);
  assert.equal(await page.locator('#ai-fields').isVisible(),false);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
- await page.screenshot({path:'work/desktop.png'});
+ await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'work/desktop.png'});
+ for(const [id,name] of [['step2','sensors'],['step3','actuators'],['step4','ai']])await page.locator('#'+id).screenshot({path:'work/'+name+'.png'});
  await page.getByRole('button',{name:/猫の給水サンプル/}).click();
  assert.equal(await page.locator('#purpose').inputValue(),'猫の種類に応じて自動で水を出す装置');
  assert.equal(await page.locator('#classes').inputValue(),'C1\nC2\nD1\nD2\nnone');
  assert.equal(await page.locator('#sample-pump-signal').inputValue(),'');
  await page.locator('#generate').click();assert.match(await page.locator('#validation').textContent(),/信号/);assert.equal(await page.locator('#result').isVisible(),false);
  await page.locator('#sample-pump-signal').selectOption('P1');await page.locator('#generate').click();
- const prompt=await page.locator('#prompt').inputValue();assert.ok(prompt.includes('["C1","C2","D1","D2","none"]'));assert.ok(prompt.includes('信号（ON・OFF）：P1'));assert.ok(prompt.includes('専用プログラム'));
+ const prompt=await page.locator('#prompt').inputValue();const expected=sampleState();expected.actuators[0].connections.signal='P1';assert.equal(prompt,generatePrompt(expected));assert.ok(prompt.includes('["C1","C2","D1","D2","none"]'));assert.ok(prompt.includes('信号（ON・OFF）：P1'));assert.ok(prompt.includes('専用プログラム'));
  await page.locator('#copy').click();await page.waitForFunction(()=>document.querySelector('#action-status').textContent.includes('コピーしました'));assert.match(await page.locator('#action-status').textContent(),/コピーしました/);assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),prompt);
  await page.locator('#prompt').fill(prompt+'\n自分で追記した文');await page.waitForTimeout(300);await page.reload();await page.waitForSelector('#sensor-list .device-item');assert.ok((await page.locator('#prompt').inputValue()).endsWith('自分で追記した文'));assert.equal(await page.locator('#copy').isDisabled(),false);
  await page.locator('#purpose').fill('猫の水皿を管理');assert.equal(await page.locator('#copy').isDisabled(),true);assert.equal(await page.locator('#stale').isVisible(),true);
@@ -31,19 +98,19 @@ try{
  await page.locator('#classes').fill('Cat1\nCat1');await page.locator('#generate').click();assert.match(await page.locator('#validation').textContent(),/重複/);
  await page.locator('#classes').fill('Cat1\n\nCat2');await page.locator('#generate').click();assert.match(await page.locator('#validation').textContent(),/空の行/);
  await page.locator('#classes').fill('Cat1\nCat2');
- await page.locator('#sensor-choice').selectOption('soil');await page.locator('#add-sensor').click();let extra=page.locator('#sensor-list .device-item').last();await extra.locator('select').selectOption('P1');await page.locator('#generate').click();assert.match(await page.locator('#validation').textContent(),/P1.*重複/);
+ await page.locator('#sensor-catalog button[data-device-id=soil]').click();let extra=page.locator('#sensor-list .device-item').last();await extra.locator('select').selectOption('P1');await page.locator('#generate').click();assert.match(await page.locator('#validation').textContent(),/P1.*重複/);
  await extra.getByRole('button',{name:/削除/}).click();assert.equal(await page.locator('#sensor-list .device-item').count(),1);
- await page.locator('#sensor-choice').selectOption('distance');await page.locator('#add-sensor').click();extra=page.locator('#sensor-list .device-item').last();assert.equal(await extra.locator('select').count(),2);await extra.locator('select').nth(0).selectOption('P0');await extra.locator('select').nth(1).selectOption('P2');
+ await page.locator('#sensor-catalog button[data-device-id=distance]').click();extra=page.locator('#sensor-list .device-item').last();assert.equal(await extra.locator('select').count(),2);await extra.locator('select').nth(0).selectOption('P0');await extra.locator('select').nth(1).selectOption('P2');
  await page.locator('#generate').click();assert.match(await page.locator('#validation').textContent(),/距離をcmで得る手順は未確認/);
- await page.locator('#purpose').fill('<img src=x onerror=alert(1)>');await page.locator('#generate').click();assert.equal(await page.locator('img').count(),0);assert.ok((await page.locator('#prompt').inputValue()).includes('<img src=x onerror=alert(1)>'));
+ await page.locator('#purpose').fill('<img src=x onerror=alert(1)>');await page.locator('#generate').click();assert.equal(await page.locator('img[src="x"]').count(),0);assert.ok((await page.locator('#prompt').inputValue()).includes('<img src=x onerror=alert(1)>'));
  // Deleting all text must leave the editable result visible.
  const beforeClear=await page.locator('#prompt').inputValue();await page.locator('#prompt').fill('');assert.equal(await page.locator('#result').isVisible(),true);assert.equal(await page.locator('#copy').isDisabled(),true);await page.locator('#prompt').fill(beforeClear);
  // Clipboard denial must offer manual selection without losing the text.
  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('denied')}}}));await page.locator('#copy').click();assert.match(await page.locator('#action-status').textContent(),/Ctrl＋C/);
- const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const m=await mobile.newPage();await m.goto(base);await m.waitForSelector('#sensor-choice optgroup',{state:'attached'});assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await m.screenshot({path:'work/mobile.png',fullPage:true});await m.getByRole('button',{name:/猫の給水サンプル/}).click();assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await mobile.close();
+ const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const m=await mobile.newPage();await m.goto(base);await m.waitForSelector('#sensor-choice optgroup',{state:'attached'});assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await m.evaluate(async()=>{for(const img of document.images)img.loading='eager';await Promise.all([...document.images].map(img=>img.decode()));});await m.screenshot({path:'work/mobile.png',fullPage:true});await m.locator('#step2').screenshot({path:'work/mobile-sensors.png'});await m.getByRole('button',{name:/猫の給水サンプル/}).click();assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await mobile.close();
  // Storage unavailable/corrupt must not prevent editing.
  const blocked=await browser.newContext();await blocked.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}}));const b=await blocked.newPage();await b.goto(base);await b.waitForSelector('#sensor-choice optgroup',{state:'attached'});assert.match(await b.locator('#save-status').textContent(),/保存できません/);await b.locator('#purpose').fill('動く装置');await blocked.close();
  const corrupt=await browser.newContext();const c=await corrupt.newPage();await c.goto(base);await c.evaluate(()=>localStorage.setItem('b2s-prompt-maker-v1','{broken'));await c.reload();assert.match(await c.locator('#save-status').textContent(),/読み取れません/);await corrupt.close();
  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
- console.log('PASS: desktop/mobile layout, S/A separation, sample, required fields, pins, AI classes, edited prompt persistence, stale-copy prevention, clipboard/fallback, storage errors, no external requests, no page errors.');
+ console.log('PASS: all device images/grouping, keyboard/multiple additions, connection fields, legacy storage, prompt parity, Chromebook layouts, desktop/mobile layout, S/A separation, sample, required fields, pins, AI classes, edited prompt persistence, stale-copy prevention, clipboard/fallback, storage errors, no external requests, no page errors.');
 }finally{await browser.close();}
