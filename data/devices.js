@@ -17,15 +17,12 @@ export const DEVICES = [
  external('scale','重量センサ','S','載せたものの重さをgで調べる。','Grove・I2C（2本の通信線を使う接続）',[
  {key:'scl',label:'SCL（クロック）',kind:'fixed',value:'P19',sharing:'i2c'},
  {key:'sda',label:'SDA（データ）',kind:'fixed',value:'P20',sharing:'i2c'},
- {key:'address',label:'I2Cアドレス（分かれば）',kind:'address',required:false},
- {key:'firmware',label:'専用プログラムの準備',kind:'choice',options:['未確認','用意済み','先生に確認する'],required:true},
- {key:'dataLabel',label:'重さを受け取る通信ラベル（分かれば）',kind:'text',required:false,placeholder:'例：weight（実際の設定と同じ文字）'}
- ],'getDataLabeled / sendData',{support:'専用プログラムと通信ラベルの確認が必要',note:'教材のweight・tareは専用プログラムで扱います。MakeCode拡張を追加するだけではB2Sへ重さは届きません。I2C端子・5V給電・Grove Shieldの配線を先生と確認してください。'}),
+ ],'getDataLabeled / sendData',{support:'Grove Shieldの配線・電源を先生と確認',note:'重さは通信ラベル「weight」で受け取ります。',memoPlaceholder:'例：水皿を載せて、皿と水を合わせた重さを測る。'}),
  builtin('led','5×5 LED','A','micro:bitの画面に文字やマークを出す。','displayMatrix / displayText'),
  builtin('speaker','スピーカー','A','音を鳴らして知らせる。','playTone / stopTone',{note:'本体スピーカーはmicro:bit V2の機能です。'}),
  external('servo','180°サーボモータ（SG90）','A','決めた角度まで動かす。','サーボ信号',[pin('signal','信号（サーボ）')],'setServo',{note:'電源とGNDの接続も先生と確認してください。'}),
- external('vibrator','振動モータ','A','振動の強さを変えて知らせる。','Grove・PWM（強さを変える出力）',[pin('signal','信号（PWM）')],'setAnalogOut'),
- external('pump','デジタルマイクロポンプ','A','水や空気を送る。','Grove・デジタル出力',[pin('signal','信号（ON・OFF）')],'setDigitalOut',{note:'教材のポンプ用モジュールを想定しています。ポンプ本体を端子へ直結せず、Grove Shieldの実際の信号ピン・電源を確認してください。動かす時間と停止条件も決めましょう。'})
+ external('vibrator','振動モータ','A','振動の強さを変えて知らせる。','Grove Shield・PWM（P14・P15・P16）',[pin('signal','信号（PWM）',['P14','P15','P16'])],'setAnalogOut'),
+ external('pump','デジタルマイクロポンプ','A','水や空気を送る。','Grove・デジタル出力',[pin('signal','信号（ON・OFF）',['P0','P1','P2'])],'setDigitalOut',{note:'教材のポンプ用モジュールを想定しています。ポンプ本体を端子へ直結せず、Grove Shieldの実際の信号ピン・電源を確認してください。動かす時間と停止条件も決めましょう。'})
 ];
 export const AI_MODES = {
  none:{name:'使わない'},

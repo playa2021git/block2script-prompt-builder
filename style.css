@@ -1484,3 +1484,15 @@ footer b {
   }
 }
 .prompt-mode {border:1px solid #c8dccd;border-radius:10px;padding:14px;margin:18px 0}.prompt-mode legend{font-size:14px;font-weight:700}.prompt-mode label{display:flex;align-items:start;gap:9px;padding:10px;border:1px solid #dce6dc;border-radius:8px;margin:8px 0;cursor:pointer}.prompt-mode label:has(input:checked){background:#edf5df;border-color:#649a6a}.prompt-mode input{margin-top:5px;accent-color:var(--green)}.prompt-mode small{display:block;font-size:12px;font-weight:400;margin-top:4px}.equipment-highlight{outline:3px solid #5f971f;outline-offset:2px}.equipment-issues.input,.equipment-input-help{color:#9b4326}.equipment-issues.support{color:#7357a1}.equipment-issues.wiring{color:#6a7052}.equipment-issues.duplicate{color:#9b4326}.equipment-input-help{font-size:11px;grid-column:1/-1}
+
+/* Clear, touch-friendly reset and equipment controls. */
+.reset-button {display:block;width:100%;min-height:64px;padding:12px;border:2px solid #ffc5a4;border-radius:10px;background:#fff1e7;color:#75351e;font-size:17px;font-weight:800;text-align:center;cursor:pointer;}
+.reset-button span {display:block;margin-top:4px;font-size:11px;font-weight:600;}
+.reset-button:hover {background:#ffdfca;}
+.equipment-actions button {min-height:44px;padding:8px 12px;font-size:14px;font-weight:800;border:2px solid #7e9c7c;}
+.equipment-actions button:last-child {border-color:#b9937b;color:#75442e;}
+
+.sample-actions {display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;max-width:100%;}
+@media(max-width:700px){.sample-actions{width:100%;justify-content:stretch}.sample-actions .sample-button{flex:1 1 240px;white-space:normal}}
+#equipment-overview {min-width:0;grid-template-columns:minmax(0,1fr)}
+.overview-row {min-width:0}

@@ -1,5 +1,5 @@
 import {DEVICES,AI_MODES,findDevice} from './data/devices.js';
-import {STORAGE_KEY,emptyState,sampleState,restoreState,makeItem,validate,generatePrompt,inputSignature} from './core.js';
+import {STORAGE_KEY,emptyState,sampleState,wateringSampleState,restoreState,makeItem,validate,generatePrompt,inputSignature} from './core.js';
 const imagePath=id=>`./assets/devices/${id}.svg`;
 const $=id=>document.getElementById(id);
 let state=emptyState(),saveTimer,storageAvailable=true;
@@ -34,7 +34,7 @@ function renderCatalog(key,group){
   button.addEventListener('click',()=>addDevice(d.id,key,group,false));
   tile.append(button);
   if(!d.builtIn){
-   const notice=d.status==='unverified'?'B2Sで距離を得る手順は未確認':d.id==='scale'?'専用プログラム・通信ラベルを確認':'配線・電源を先生と確認';
+   const notice=d.status==='unverified'?'B2Sで距離を得る手順は未確認':'配線・電源を先生と確認';
    tile.append(el('p','tile-warning',notice));
   }
   const guide=el('a','tile-guide','装置ガイドで詳しく見る ↗');
@@ -71,7 +71,7 @@ function addDevice(deviceId,key,group,focus=true){
 }
 function renderList(key,group){const list=$(key==='sensors'?'sensor-list':'actuator-list');renderCatalog(key,group);list.replaceChildren();$(key==='sensors'?'sensor-count':'actuator-count').textContent=state[key].length+'個';if(!state[key].some(i=>i.id===editing[key]))editing[key]=state[key][0]?.id??null;
  list.hidden=!editing[key];
- state[key].forEach((item,index)=>{const d=findDevice(item.deviceId);const article=el('article','device-item');article.id='item-'+item.id;article.tabIndex=-1;article.hidden=item.id!==editing[key];const top=el('div','device-top');const name=el('div','device-name');name.append(el('span','device-tag',group+(index+1)),document.createTextNode(d.name));const close=el('button','close-editor','閉じる');close.type='button';close.addEventListener('click',()=>{list.hidden=true;document.querySelector(`button.device-pick[data-device-id="${d.id}"]`).focus();});const remove=el('button','remove','削除');remove.type='button';remove.setAttribute('aria-label',`${group}${index+1} ${d.name}を削除`);remove.addEventListener('click',()=>{state[key]=state[key].filter(i=>i.id!==item.id);renderList(key,group);changed();document.querySelector(`#${group==='S'?'sensor':'actuator'}-catalog button[data-device-id="${d.id}"]`).focus();});top.append(deviceImage(d,'selected-thumbnail'),name,close,remove);article.append(top,el('p','device-description',d.description),el('span',d.status==='source'?'badge':'badge warning',d.builtIn?'内蔵・外付け端子なし':d.status==='unverified'?'B2S対応は要確認':d.id==='scale'?'専用プログラムが必要':'配線・電源を確認'));
+ state[key].forEach((item,index)=>{const d=findDevice(item.deviceId);const article=el('article','device-item');article.id='item-'+item.id;article.tabIndex=-1;article.hidden=item.id!==editing[key];const top=el('div','device-top');const name=el('div','device-name');name.append(el('span','device-tag',group+(index+1)),document.createTextNode(d.name));const close=el('button','close-editor','閉じる');close.type='button';close.addEventListener('click',()=>{list.hidden=true;document.querySelector(`button.device-pick[data-device-id="${d.id}"]`).focus();});const remove=el('button','remove','削除');remove.type='button';remove.setAttribute('aria-label',`${group}${index+1} ${d.name}を削除`);remove.addEventListener('click',()=>{state[key]=state[key].filter(i=>i.id!==item.id);renderList(key,group);changed();document.querySelector(`#${group==='S'?'sensor':'actuator'}-catalog button[data-device-id="${d.id}"]`).focus();});top.append(deviceImage(d,'selected-thumbnail'),name,close,remove);article.append(top,el('p','device-description',d.description),el('span',d.status==='source'?'badge':'badge warning',d.builtIn?'内蔵・外付け端子なし':d.status==='unverified'?'B2S対応は要確認':'配線・電源を確認'));
  if(d.fields.length){const fields=el('div','connection-fields');for(const f of d.fields){const wrap=el('div'),id=`${item.id}-${f.key}`,label=el('label',null,f.label+(f.required?' *':''));label.htmlFor=id;let input;
   if(f.kind==='pin'||f.kind==='choice'){input=el('select');const blank=el('option',null,'選んでください');blank.value='';input.append(blank);for(const value of f.allowed??f.options){const option=el('option',null,value);option.value=value;input.append(option);}}
   else{input=el('input');input.type='text';input.placeholder=f.placeholder??(f.kind==='address'?'例：0x26':'');input.spellcheck=false;}
@@ -81,7 +81,7 @@ function renderList(key,group){const list=$(key==='sensors'?'sensor-list':'actua
   wrap.append(label,input);fields.append(wrap);
  }article.append(fields);}
  if(d.id==='speaker')article.append(el('p','device-note','図は音を出す働きのイメージです。接続はmicro:bit V2内蔵スピーカーを使います（外付け端子なし）。'));
- if(d.note)article.append(el('p','device-note',d.note));const memoId=item.id+'-note',memoLabel=el('label','memo-label','この装置のメモ（分かれば）');memoLabel.htmlFor=memoId;const memo=el('input','device-memo');memo.type='text';memo.id=memoId;memo.placeholder='例：水皿の重さを測る。先生と配線を確認済み。';memo.value=item.note;memo.addEventListener('input',()=>{item.note=memo.value;changed();});article.append(memoLabel,memo);list.append(article);
+ if(d.note)article.append(el('p','device-note',d.note));const memoId=item.id+'-note',memoLabel=el('label','memo-label','この装置のメモ（分かれば）');memoLabel.htmlFor=memoId;const memo=el('input','device-memo');memo.type='text';memo.id=memoId;memo.placeholder=d.memoPlaceholder??'例：この装置で何を調べるか、何を動かすか。';memo.value=item.note;memo.addEventListener('input',()=>{item.note=memo.value;changed();});article.append(memoLabel,memo);list.append(article);
  });
 }
 function renderAI(){const mode=state.ai.mode;$('ai-fields').hidden=mode==='none';$('ai-support').textContent=AI_MODES[mode]?.support??'';$('class-count').textContent=(state.ai.classes?state.ai.classes.split(/\r?\n/).filter(c=>c.trim()).length:0)+'クラス';for(const input of document.querySelectorAll('[name=ai-mode]'))input.checked=input.value===mode;}
@@ -91,7 +91,8 @@ for(const [id,key]of [['classes','classes'],['model-url','url']])$(id).addEventL
 for(const radio of document.querySelectorAll('[name=prompt-mode]'))radio.addEventListener('change',()=>{state.promptMode=radio.value;changed();});
 for(const radio of document.querySelectorAll('[name=ai-mode]'))radio.addEventListener('change',()=>{state.ai.mode=radio.value;renderAI();changed();});
 for(const [button,select,key,group]of [['add-sensor','sensor-choice','sensors','S'],['add-actuator','actuator-choice','actuators','A']])$(button).addEventListener('click',()=>{const deviceId=$(select).value;if(!deviceId){$(select).focus();$('action-status').textContent='追加する装置を選んでから「追加」を押そう。';return;}addDevice(deviceId,key,group);});
-$('sample').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力を猫の給水サンプルに置き換えますか？'))return;state=sampleState();editing.sensors='sample-scale';editing.actuators='sample-pump';render();goStep('step1',false);changed();$('action-status').textContent='サンプルを読み込みました。ポンプの端子と未確認の条件は、自分の装置に合わせて入力しよう。';$('purpose').focus();});
+$('sample').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力を既製品「夜間防犯ライト」の設定に置き換えますか？'))return;state=sampleState();editing.sensors='sample-pir';editing.actuators='sample-led';render();goStep('step1',false);changed();$('action-status').textContent='既製品「夜間防犯ライト」を読み込みました。人感センサの端子を、実際の接続に合わせて選ぼう。';$('purpose').focus();});
+$('sample-watering').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力をサンプル②「自動観葉植物水やり装置」の設定に置き換えますか？'))return;state=wateringSampleState();editing.sensors='watering-soil';editing.actuators='watering-pump';render();goStep('step1',false);changed();$('action-status').textContent='サンプル②「自動観葉植物水やり装置」を読み込みました。人感P0・土壌水分P1・ポンプP2です。';$('purpose').focus();});
 $('reset').addEventListener('click',()=>{if(!confirm('このブラウザに保存した入力と指示文を消しますか？'))return;clearTimeout(saveTimer);state=emptyState();render();goStep('step1',false);$('validation').hidden=true;try{localStorage.removeItem(STORAGE_KEY);$('save-status').textContent='保存した入力を消しました';}catch{$('save-status').textContent='保存内容を消せませんでした。ブラウザの設定を確認しよう。';}$('action-status').textContent='入力を消しました。新しいアイデアを書いてみよう。';$('purpose').focus();});
 function showIssues(result){const container=$('validation');container.replaceChildren();for(const [items,title,warning]of [[result.errors,'入力・接続を確認してから、もう一度つくろう',false],[result.warnings.filter(w=>['missing-model','duplicate'].includes(w.kind)),'入力・登録の確認（未入力でも指示文は作れます）',true],[result.warnings.filter(w=>!['missing-model','duplicate'].includes(w.kind)),'先生・実機での確認（指示文にも入ります）',true]]){if(!items.length)continue;const box=el('div',warning?'issues warning':'issues'),ul=el('ul');box.append(el('p',null,title));for(const issue of items){const li=el('li'),link=el('a',null,issue.message);link.href='#'+issue.target;link.addEventListener('click',e=>{e.preventDefault();const target=issue.target==='ai-mode'?document.querySelector('[name=ai-mode]:checked'):$(issue.target);if(target)revealTarget(target);});li.append(link);ul.append(li);if(!warning){const node=$(issue.target);if(node)node.setAttribute('aria-invalid','true');}}box.append(ul);container.append(box);}container.hidden=!result.errors.length&&!result.warnings.length;}
 $('builder').addEventListener('submit',e=>{e.preventDefault();if(activeStep!=='step6')return;clearTimeout(saveTimer);const result=validate(state);showIssues(result);if(result.errors.length){$('action-status').textContent=`まだ指示文をつくれません。${result.errors.length}件の入力を確認しよう。`;$('validation').focus();return;}if(state.prompt&&state.signature===inputSignature(state)&&$('prompt').value!==generatePrompt(state)&&!confirm('手直しした指示文を、入力からつくり直しますか？'))return;state.prompt=generatePrompt(state);state.signature=inputSignature(state);$('prompt').value=state.prompt;updateResult();save();$('action-status').textContent=result.warnings.length?'確認が必要なことを含めて、指示文をつくりました。内容を読んでからコピーしよう。':'指示文をつくりました。内容を読んで、専用Gemへコピーしよう。';$('result').scrollIntoView({block:'nearest'});});
@@ -116,7 +117,7 @@ function goStep(id,focus=true){
 }
 function editDevice(key,id){
  editing[key]=id;renderList(key,key==='sensors'?'S':'A');
- goStep(key==='sensors'?'step2':'step3');
+ goStep(key==='sensors'?'step2':'step4');
  $('equipment').classList.remove('is-open');$('equipment-toggle').setAttribute('aria-expanded','false');
  $('equipment-toggle').textContent='発明セットを開く ↓';
  const article=$('item-'+id);article.focus();
@@ -194,7 +195,7 @@ function renderEquipment(){
   if(!state.ai.url)card.append(el('p','equipment-note','実際のモデルURLを入力するか、認識に必要ならGemで確認してください。未入力でも指示文は作れます。'));
   const actions=el('div','equipment-actions ai-actions'),edit=el('button','ai-edit','編集'),remove=el('button',null,'外す');
   edit.type=remove.type='button';edit.setAttribute('aria-label','AIの設定を編集');remove.setAttribute('aria-label','AIを外す');
-  edit.addEventListener('click',()=>goStep('step4'));
+  edit.addEventListener('click',()=>goStep('step3'));
   remove.addEventListener('click',()=>{state.ai.mode='none';renderAI();changed();$('equipment-message').textContent='AIを発明セットから外しました。';$('review-settings').focus({preventScroll:true});});
   actions.append(edit,remove);card.append(actions);ai.append(card);
  }

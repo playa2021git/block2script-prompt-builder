@@ -3,9 +3,30 @@ export const PROMPT_MODES={auto:'AIにおまかせ',precise:'自分で細かく�
 export const promptMode=s=>typeof s.promptMode==='string'&&Object.hasOwn(PROMPT_MODES,s.promptMode)?s.promptMode:'auto';
 export const STORAGE_KEY='b2s-prompt-maker-v1';
 export const emptyState=()=>({version:1,promptMode:'auto',purpose:'',sensors:[],actuators:[],ai:{mode:'none',classes:'',url:''},behavior:'',prompt:'',signature:''});
-export const inputSignature=s=>JSON.stringify([s.purpose,s.sensors,s.actuators,s.ai,s.behavior,promptMode(s)]);
+export const inputSignature=s=>JSON.stringify(['device-settings-v2',s.purpose,s.sensors,s.actuators,s.ai,s.behavior,promptMode(s)]);
 export const makeItem=(deviceId,id)=>({id,deviceId,connections:{},note:''});
-export function sampleState(){const s=emptyState();s.purpose='猫の種類に応じて自動で水を出す装置';s.sensors=[makeItem('scale','sample-scale')];s.sensors[0].connections.firmware='未確認';s.sensors[0].connections.address='0x26';s.actuators=[makeItem('pump','sample-pump')];s.ai={mode:'image',classes:'C1\nC2\nD1\nD2\nnone',url:''};s.behavior='猫の接近を検知し、画像認識で種類を識別する。C1で、重量センサの値が１０ｇ以下の場合のみデジタルマイクロポンプで給水する。再検知による連続給水を防止する。\n接近を検知する方法、ポンプを動かす時間、停止条件、次に給水してよい条件は、先生と相談して決めたい。';return s;}
+export function sampleState(){
+ const s=emptyState();
+ s.purpose='夜間や暗い場所で人の動きを検知したときだけ、25個のLEDを点灯して周囲に知らせる防犯ライトを作りたい。明るいときや人がいないときは消灯する。';
+ s.sensors=[makeItem('light','sample-light'),makeItem('pir','sample-pir')];
+ s.sensors[0].note='まわりの明るさを調べる。';
+ s.sensors[1].note='人の動きを検知する。';
+ s.actuators=[makeItem('led','sample-led')];
+ s.behavior='明るさセンサの数値が10未満、かつ人感センサがONのときだけ、micro:bitの25個のLEDをすべて点灯する。明るさセンサの数値が10以上、または人感センサがOFFになったら、25個のLEDをすべて消灯する。条件を繰り返し確認し、両方の条件を満たしたら再び点灯する。';
+ return s;
+}
+export function wateringSampleState(){
+ const s=emptyState();
+ s.purpose='留守中も観葉植物の土の水分量を見守り、乾いたら自動で水やりする装置を作りたい。人がいるときだけLEDに水分量を表示して無駄な電力消費を抑え、Aボタンから手動でも給水できるようにしたい。';
+ s.sensors=[makeItem('pir','watering-pir'),makeItem('soil','watering-soil'),makeItem('buttons','watering-buttons')];
+ s.sensors[0].connections.signal='P0';s.sensors[0].note='人がいるときだけLEDディスプレイに水分量を表示するために使う。';
+ s.sensors[1].connections.signal='P1';s.sensors[1].note='観葉植物の土に挿して、水分量を常に計測する。水分量は0〜100％で扱う。';
+ s.sensors[2].note='Aボタンで手動給水する。';
+ s.actuators=[makeItem('pump','watering-pump'),makeItem('led','watering-led')];
+ s.actuators[0].connections.signal='P2';s.actuators[0].note='1分間の作動で60mL、10秒間の作動で10mLを給水する想定。実際の吐出量は実機で確認する。';
+ s.behavior='土壌水分センサで常に水分量を計測する。水分量が10％未満になったら、デジタルマイクロポンプを1分間（60秒）作動させて60mL給水し、停止する。\n人感センサがONのときだけ、LEDディスプレイに現在の水分量を0から100の数値で表示する。人感センサがOFFのときはLEDをすべて消灯し、無駄な電力消費を抑える。人がいなくても水分量の計測と自動給水は続ける。\nAボタンを1回押すと、ポンプを10秒間作動させて10mL手動給水し、停止する。\n自動給水と手動給水を重複して実行しない。給水中もセンサの計測と人の有無による表示切り替えを続ける。水分量が10％未満のままの場合に次の自動給水を許可する条件と、給水中にAボタンを押した場合の扱いは、連続給水を防ぐためコード作成前に確認する。土壌水分センサの測定値を0〜100％へ換算するための乾燥時・湿潤時の校正値は実測して確認する。';
+ return s;
+}
 export function restoreState(raw){
  try{const x=JSON.parse(raw);if(x?.version!==1||!Array.isArray(x.sensors)||!Array.isArray(x.actuators))return null;
  const text=v=>typeof v==='string'?v:'';const s=emptyState();
@@ -25,7 +46,7 @@ export function validate(s){
   const d=findDevice(item.deviceId),target='item-'+item.id;
   if(!d||d.group!==group){add(errors,'装置の種類を選び直してください。',target);continue;}
   const name=`${group}${index+1} ${d.name}`;
-  if(d.status!=='source')add(warnings,`${name}：${d.support}`,target,d.status==='unverified'||d.id==='scale'?'support':'wiring');
+  if(d.status!=='source')add(warnings,`${name}：${d.support}`,target,d.status==='unverified'?'support':'wiring');
   if(d.builtIn&&s[key].filter(i=>i.deviceId===d.id).length>1)add(warnings,`${name}：同じ内蔵装置が重複登録されています。不要な登録を外して整理してください。`,target,'duplicate');
   const localPins=new Set();
   for(const f of d.fields){const value=f.kind==='fixed'?f.value:item.connections[f.key]??'';
@@ -38,18 +59,14 @@ export function validate(s){
     const peers=used.get(value)??[];for(const peer of peers){if(f.sharing==='i2c'&&peer.sharing==='i2c')add(warnings,`${value}はI2Cで共有しています。装置のアドレス・電源・配線が共有可能か先生と確認しよう。`,target,'wiring');else add(errors,`${value}が「${peer.name}」と「${name}」で重複しています。`,target,'pin-conflict',[peer.target]);}peers.push({name,sharing:f.sharing,target});used.set(value,peers);
    }
   }
-  if(d.id==='scale'){
-   if(item.connections.firmware!=='用意済み'||!item.connections.dataLabel?.trim())add(warnings,`${name}：専用プログラムと重さの通信ラベルが未確認です。Gemにも確認を求めます。`,target,'support');
-   const same=s.sensors.filter(i=>i.deviceId==='scale'&&i.id!==item.id&&i.connections.address&&i.connections.address.toLowerCase()===item.connections.address?.toLowerCase());
-   if(same.length)add(errors,`${name}：同じI2Cアドレスの重量センサがあります。共有できるか配線を確認してください。`,target,'address-conflict',same.map(i=>'item-'+i.id));
-  }
+
  }
- if(!Object.hasOwn(AI_MODES,s.ai.mode))add(errors,'④ AIの種類を選び直そう。','ai-mode');
+ if(!Object.hasOwn(AI_MODES,s.ai.mode))add(errors,'③ AIの種類を選び直そう。','ai-mode');
  if(s.ai.mode!=='none'){
   const classes=s.ai.classes.split(/\r?\n/);
-  if(classes.some(c=>!c.trim()))add(errors,'④ Class名は1行に1つ。空の行にも名前を入れるか、その行を消そう。','classes');
-  if(new Set(classes).size!==classes.length)add(errors,'④ 同じClass名が重複しています。','classes');
-  if(s.ai.url){try{const u=new URL(s.ai.url);if(u.protocol!=='https:'||u.hostname!=='teachablemachine.withgoogle.com'||!/^\/models\/[^/]+\/?$/.test(u.pathname)||u.search||u.hash)throw Error();}catch{add(errors,'④ モデルURLはTeachable Machineの共有URL（https://teachablemachine.withgoogle.com/models/…/）を入力しよう。','model-url');}}
+  if(classes.some(c=>!c.trim()))add(errors,'③ Class名は1行に1つ。空の行にも名前を入れるか、その行を消そう。','classes');
+  if(new Set(classes).size!==classes.length)add(errors,'③ 同じClass名が重複しています。','classes');
+  if(s.ai.url){try{const u=new URL(s.ai.url);if(u.protocol!=='https:'||u.hostname!=='teachablemachine.withgoogle.com'||!/^\/models\/[^/]+\/?$/.test(u.pathname)||u.search||u.hash)throw Error();}catch{add(errors,'③ モデルURLはTeachable Machineの共有URL（https://teachablemachine.withgoogle.com/models/…/）を入力しよう。','model-url');}}
   if(!s.ai.url)add(warnings,'モデルURLは未入力です。画像・音声認識などで必要なら、実際の共有URLを確認してください。','model-url','missing-model');
   if(s.ai.mode==='pose')add(warnings,AI_MODES.pose.support,'ai-mode','support');
  }

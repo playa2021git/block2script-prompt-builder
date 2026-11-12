@@ -28,7 +28,7 @@ try{
  await page.locator('.device-item:visible .device-memo').fill('水やり用');await page.locator('.device-item:visible .device-memo').press('Enter');
  assert.equal(await page.locator('#step2').isVisible(),true);assert.equal(await page.locator('#prompt').inputValue(),'');
  assert.match(await equip('sensors','soil').locator('.equipment-status').textContent(),/入力済み/);
- await go(3);assert.equal(await page.locator('#sensor-catalog').isVisible(),false);
+ await go(4);assert.equal(await page.locator('#sensor-catalog').isVisible(),false);
  await pick('pump').click();await selectPin('P1');
  assert.match(await equip('actuators','pump').locator('.equipment-status').textContent(),/入力を確認/);
  assert.match(await equip('actuators','pump').locator('.equipment-issues.input').textContent(),/P1.*重複/);
@@ -43,7 +43,7 @@ try{
  assert.equal(await equip('sensors','soil').count(),1);
  await pick('buttons').click();assert.equal(await page.locator('.device-item:visible .connection-fields').count(),0);
  await equip('sensors','buttons').getByRole('button',{name:/外す/}).click();
- await go(4);await page.locator('[name=ai-mode][value=image]').check();
+ await go(3);await page.locator('[name=ai-mode][value=image]').check();
  const classes=' Cat1 \nnone';await page.locator('#classes').fill(classes);
  assert.equal(await page.locator('.equipment-classes').textContent(),JSON.stringify(classes.split('\n')));
  assert.match(await page.locator('#equipment-overview').textContent(),/画像認識/);
@@ -62,11 +62,11 @@ try{
  assert.match(await page.locator('#equipment-overview').textContent(),/画像認識/);
  // AI can be removed without destroying the exact labels for a later re-selection.
  await page.getByRole('button',{name:'AIを外す',exact:true}).click();assert.match(await page.locator('#equipped-ai').textContent(),/使わない/);
- await go(4);await page.locator('[name=ai-mode][value=image]').check();assert.equal(await page.locator('#classes').inputValue(),classes);
+ await go(3);await page.locator('[name=ai-mode][value=image]').check();assert.equal(await page.locator('#classes').inputValue(),classes);
  // Final validation links must open the hidden editor, not focus invisible controls.
  await equip('actuators','pump').getByRole('button',{name:/編集/}).click();await selectPin('');
  await go(6);await page.locator('#generate').click();await page.locator('#validation .issues:not(.warning) a').first().click();
- assert.equal(await page.locator('#step3').isVisible(),true);assert.equal(await page.locator('.device-item:visible').count(),1);
+ assert.equal(await page.locator('#step4').isVisible(),true);assert.equal(await page.locator('.device-item:visible').count(),1);
  await selectPin('P2');
  // An unverified device can be configured, but its B2S warning must remain.
  await go(2);await pick('distance').click();
@@ -86,7 +86,7 @@ try{
    assert.equal(await page.locator('#equipment-content').isVisible(),false);
    await page.locator('#equipment-toggle').click();assert.equal(await page.locator('#equipment-content').isVisible(),true);
    if(width===390)await page.screenshot({animations:'disabled',path:'work/workshop-mobile-equipment.png'});
-   await equip('actuators','pump').getByRole('button',{name:/編集/}).click();assert.equal(await page.locator('#step3').isVisible(),true);
+   await equip('actuators','pump').getByRole('button',{name:/編集/}).click();assert.equal(await page.locator('#step4').isVisible(),true);
    assert.equal(await page.locator('#equipment-content').isVisible(),false);await go(2);
   }
   await page.evaluate(()=>{scrollTo(0,0);document.getElementById('equipment').scrollTop=0;});await page.screenshot({animations:'disabled',path:`work/workshop-${width}.png`});
