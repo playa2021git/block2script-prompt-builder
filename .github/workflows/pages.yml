@@ -25,7 +25,7 @@ jobs:
         run: |
           PORT=5181 BASE_PATH=/block2script-prompt-builder/ node tests/serve.mjs &
           for i in $(seq 1 20); do curl -fsS http://127.0.0.1:5181/block2script-prompt-builder/ > /dev/null && break; sleep 1; done
-          TEST_URL=http://127.0.0.1:5181/block2script-prompt-builder/ node tests/browser.test.mjs
+          TEST_URL=http://127.0.0.1:5181/block2script-prompt-builder/ npm run test:browser
       - uses: actions/configure-pages@v5
       - name: Prepare static site
         run: |
