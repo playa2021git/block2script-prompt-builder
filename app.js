@@ -1,3 +1,4 @@
+import {initMotion} from './motion.js';
 import {DEVICES,AI_MODES,findDevice} from './data/devices.js';
 import {STORAGE_KEY,emptyState,sampleState,wateringSampleState,restoreState,makeItem,validate,generatePrompt,inputSignature} from './core.js';
 const imagePath=id=>`./assets/devices/${id}.svg`;
@@ -5,10 +6,11 @@ const $=id=>document.getElementById(id);
 let state=emptyState(),saveTimer,storageAvailable=true;
 let activeStep='step1';
 const editing={sensors:null,actuators:null};
+const motion=initMotion();
 try{const saved=localStorage.getItem(STORAGE_KEY);if(saved){const restored=restoreState(saved);if(restored){state=restored;$('save-status').textContent='前回の入力を復元しました';}else $('save-status').textContent='保存内容を読み取れません。新しく入力できます。';}}catch{storageAvailable=false;$('save-status').textContent='このブラウザでは保存できません。再読み込みに注意。';}
 const el=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;};
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));storageAvailable=true;$('save-status').textContent='このブラウザに保存しました';}catch{storageAvailable=false;$('save-status').textContent='保存できません。再読み込み前に指示文をコピーしよう。';}},200);}
-function changed(){save();updateResult();renderEquipment();$('action-status').textContent='';$('action-status').classList.remove('success-notice');$('validation').hidden=true;for(const node of document.querySelectorAll('[aria-invalid]'))node.removeAttribute('aria-invalid');}
+function changed(){save();updateResult();renderEquipment();$('action-status').textContent='';$('action-status').classList.remove('success-notice');$('validation').hidden=true;for(const node of document.querySelectorAll('[aria-invalid]'))node.removeAttribute('aria-invalid');motion.sync(state,activeStep);}
 function updateResult(){const stale=!!state.prompt&&state.signature!==inputSignature(state);$('result').hidden=!state.prompt&&!state.signature;$('stale').hidden=!stale;$('copy').disabled=stale||!state.prompt.trim();}
 function fillChoices(id,group){const select=$(id);select.replaceChildren(el('option',null,'装置を選ぼう'));select.firstChild.value='';for(const [builtIn,label]of [[true,'micro:bit内蔵'],[false,'外付け']]){const optgroup=el('optgroup');optgroup.label=label;for(const d of DEVICES.filter(d=>d.group===group&&d.builtIn===builtIn)){const option=el('option',null,d.name+(d.status==='unverified'?'〈対応要確認〉':''));option.value=d.id;optgroup.append(option);}select.append(optgroup);}}
 function deviceImage(d,className=''){
@@ -32,6 +34,7 @@ function renderCatalog(key,group){
    el('strong','tile-name',d.name),el('span','tile-description',d.description),
    el('span','tile-add',n?(d.builtIn?'✓ 選択済み · 装備を確認':'✓ '+n+'個選択中 · もう1個追加'):'＋ この装置を追加'));
   button.addEventListener('click',()=>addDevice(d.id,key,group,false));
+  if(n){const badge=el('span','motion-quantity',String(n));badge.setAttribute('aria-hidden','true');button.append(badge);}
   tile.append(button);
   if(!d.builtIn){
    const notice=d.status==='unverified'?'B2Sで距離を得る手順は未確認':'配線・電源を先生と確認';
@@ -56,13 +59,14 @@ function addDevice(deviceId,key,group,focus=true){
   const card=[...document.querySelectorAll('.equipment-item')].find(n=>n.dataset.itemId===existing.id);
   if(innerWidth<=900&&!$('equipment').classList.contains('is-open'))$('equipment-toggle').click();
   card.classList.add('equipment-highlight');card.tabIndex=-1;card.focus({preventScroll:true});card.scrollIntoView({block:'nearest'});
-  if(!matchMedia('(prefers-reduced-motion: reduce)').matches)card.animate([{background:'#dff2ae'},{background:'#fff'}],{duration:700});
+  motion.reselected(card);
   card.addEventListener('blur',()=>card.classList.remove('equipment-highlight'),{once:true});
   $('equipment-message').textContent=findDevice(deviceId).name+'は選択済みです。同じ内蔵装置は1つだけ使います。';
   return;
  }
+ const origin=motion.source(document.querySelector(`button.device-pick[data-device-id="${deviceId}"] img`));
  const item=makeItem(deviceId,crypto.randomUUID());
- state[key].push(item);editing[key]=item.id;renderList(key,group);changed();animateEquip(deviceId,item.id);
+ state[key].push(item);editing[key]=item.id;renderList(key,group);changed();announceEquip(deviceId);motion.added(origin,item.id,key);
  const kind=group==='S'?'sensor':'actuator';
  $(kind+'-feedback').textContent=findDevice(deviceId).name+'を追加しました。中央の設定で接続を確認しよう。';
  if(focus)$('item-'+item.id).focus();
@@ -70,7 +74,7 @@ function addDevice(deviceId,key,group,focus=true){
 }
 function renderList(key,group){const list=$(key==='sensors'?'sensor-list':'actuator-list');renderCatalog(key,group);list.replaceChildren();$(key==='sensors'?'sensor-count':'actuator-count').textContent=state[key].length+'個';if(!state[key].some(i=>i.id===editing[key]))editing[key]=state[key][0]?.id??null;
  list.hidden=!editing[key];
- state[key].forEach((item,index)=>{const d=findDevice(item.deviceId);const article=el('article','device-item');article.id='item-'+item.id;article.tabIndex=-1;article.hidden=item.id!==editing[key];const top=el('div','device-top');const name=el('div','device-name');name.append(el('span','device-tag',group+(index+1)),document.createTextNode(d.name));const close=el('button','close-editor','閉じる');close.type='button';close.addEventListener('click',()=>{list.hidden=true;document.querySelector(`button.device-pick[data-device-id="${d.id}"]`).focus();});const remove=el('button','remove','削除');remove.type='button';remove.setAttribute('aria-label',`${group}${index+1} ${d.name}を削除`);remove.addEventListener('click',()=>{state[key]=state[key].filter(i=>i.id!==item.id);renderList(key,group);changed();document.querySelector(`#${group==='S'?'sensor':'actuator'}-catalog button[data-device-id="${d.id}"]`).focus();});top.append(deviceImage(d,'selected-thumbnail'),name,close,remove);article.append(top,el('p','device-description',d.description),el('span',d.status==='source'?'badge':'badge warning',d.builtIn?'内蔵・外付け端子なし':d.status==='unverified'?'B2S対応は要確認':'配線・電源を確認'));
+ state[key].forEach((item,index)=>{const d=findDevice(item.deviceId);const article=el('article','device-item');article.id='item-'+item.id;article.tabIndex=-1;article.hidden=item.id!==editing[key];const top=el('div','device-top');const name=el('div','device-name');name.append(el('span','device-tag',group+(index+1)),document.createTextNode(d.name));const close=el('button','close-editor','閉じる');close.type='button';close.addEventListener('click',()=>{list.hidden=true;document.querySelector(`button.device-pick[data-device-id="${d.id}"]`).focus();});const remove=el('button','remove','削除');remove.type='button';remove.setAttribute('aria-label',`${group}${index+1} ${d.name}を削除`);remove.addEventListener('click',()=>{motion.removing(document.querySelector(`.equipment-item[data-item-id="${item.id}"]`));state[key]=state[key].filter(i=>i.id!==item.id);renderList(key,group);changed();document.querySelector(`#${group==='S'?'sensor':'actuator'}-catalog button[data-device-id="${d.id}"]`).focus();});top.append(deviceImage(d,'selected-thumbnail'),name,close,remove);article.append(top,el('p','device-description',d.description),el('span',d.status==='source'?'badge':'badge warning',d.builtIn?'内蔵・外付け端子なし':d.status==='unverified'?'B2S対応は要確認':'配線・電源を確認'));
  if(d.fields.length){const fields=el('div','connection-fields');for(const f of d.fields){const wrap=el('div'),id=`${item.id}-${f.key}`,label=el('label',null,f.label+(f.required?' *':''));label.htmlFor=id;let input;
   if(f.kind==='pin'||f.kind==='choice'){input=el('select');const blank=el('option',null,'選んでください');blank.value='';input.append(blank);for(const value of f.allowed??f.options){const option=el('option',null,value);option.value=value;input.append(option);}}
   else{input=el('input');input.type='text';input.placeholder=f.placeholder??(f.kind==='address'?'例：0x26':'');input.spellcheck=false;}
@@ -84,24 +88,24 @@ function renderList(key,group){const list=$(key==='sensors'?'sensor-list':'actua
  });
 }
 function renderAI(){const mode=state.ai.mode;$('ai-fields').hidden=mode==='none';$('ai-support').textContent=AI_MODES[mode]?.support??'';$('class-count').textContent=(state.ai.classes?state.ai.classes.split(/\r?\n/).filter(c=>c.trim()).length:0)+'クラス';for(const input of document.querySelectorAll('[name=ai-mode]'))input.checked=input.value===mode;}
-function render(){for(const radio of document.querySelectorAll('[name=prompt-mode]'))radio.checked=radio.value===state.promptMode;fillChoices('sensor-choice','S');fillChoices('actuator-choice','A');$('purpose').value=state.purpose;$('behavior').value=state.behavior;$('classes').value=state.ai.classes;$('model-url').value=state.ai.url;$('prompt').value=state.prompt;renderList('sensors','S');renderList('actuators','A');renderAI();updateResult();renderEquipment();}
+function render(){for(const radio of document.querySelectorAll('[name=prompt-mode]'))radio.checked=radio.value===state.promptMode;fillChoices('sensor-choice','S');fillChoices('actuator-choice','A');$('purpose').value=state.purpose;$('behavior').value=state.behavior;$('classes').value=state.ai.classes;$('model-url').value=state.ai.url;$('prompt').value=state.prompt;renderList('sensors','S');renderList('actuators','A');renderAI();updateResult();renderEquipment();motion.sync(state,activeStep);}
 for(const [id,key]of [['purpose','purpose'],['behavior','behavior']])$(id).addEventListener('input',()=>{state[key]=$(id).value;changed();});
 for(const [id,key]of [['classes','classes'],['model-url','url']])$(id).addEventListener('input',()=>{state.ai[key]=$(id).value;renderAI();changed();});
 for(const radio of document.querySelectorAll('[name=prompt-mode]'))radio.addEventListener('change',()=>{state.promptMode=radio.value;changed();});
-for(const radio of document.querySelectorAll('[name=ai-mode]'))radio.addEventListener('change',()=>{state.ai.mode=radio.value;renderAI();changed();});
+for(const radio of document.querySelectorAll('[name=ai-mode]'))radio.addEventListener('change',()=>{const origin=motion.source(radio.nextElementSibling.querySelector('img'));state.ai.mode=radio.value;renderAI();changed();if(radio.value!=='none')motion.added(origin,null,'ai');});
 for(const [button,select,key,group]of [['add-sensor','sensor-choice','sensors','S'],['add-actuator','actuator-choice','actuators','A']])$(button).addEventListener('click',()=>{const deviceId=$(select).value;if(!deviceId){$(select).focus();$('action-status').textContent='追加する装置を選んでから「追加」を押そう。';return;}addDevice(deviceId,key,group);});
-$('sample').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力を既製品「夜間防犯ライト」の設定に置き換えますか？'))return;state=sampleState();editing.sensors='sample-pir';editing.actuators='sample-led';render();goStep('step1',false);changed();$('action-status').textContent='既製品「夜間防犯ライト」を読み込みました。人感センサの端子を、実際の接続に合わせて選ぼう。';$('purpose').focus();});
-$('sample-watering').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力をサンプル②「自動観葉植物水やり装置」の設定に置き換えますか？'))return;state=wateringSampleState();editing.sensors='watering-soil';editing.actuators='watering-pump';render();goStep('step1',false);changed();$('action-status').textContent='サンプル②「自動観葉植物水やり装置」を読み込みました。人感P0・土壌水分P1・ポンプP2です。';$('purpose').focus();});
-$('reset').addEventListener('click',()=>{if(!confirm('このブラウザに保存した入力と指示文を消しますか？'))return;clearTimeout(saveTimer);state=emptyState();render();goStep('step1',false);$('validation').hidden=true;try{localStorage.removeItem(STORAGE_KEY);$('save-status').textContent='保存した入力を消しました';}catch{$('save-status').textContent='保存内容を消せませんでした。ブラウザの設定を確認しよう。';}$('action-status').textContent='入力を消しました。新しいアイデアを書いてみよう。';$('purpose').focus();});
+$('sample').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力を既製品「夜間防犯ライト」の設定に置き換えますか？'))return;state=sampleState();editing.sensors='sample-pir';editing.actuators='sample-led';render();goStep('step1',false);changed();$('action-status').textContent='既製品「夜間防犯ライト」を読み込みました。人感センサの端子を、実際の接続に合わせて選ぼう。';$('purpose').focus();motion.sample();});
+$('sample-watering').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力をサンプル②「自動観葉植物水やり装置」の設定に置き換えますか？'))return;state=wateringSampleState();editing.sensors='watering-soil';editing.actuators='watering-pump';render();goStep('step1',false);changed();$('action-status').textContent='サンプル②「自動観葉植物水やり装置」を読み込みました。人感P0・土壌水分P1・ポンプP2です。';$('purpose').focus();motion.sample();});
+$('reset').addEventListener('click',async()=>{if(!await motion.confirmReset())return;clearTimeout(saveTimer);state=emptyState();render();goStep('step1',false);$('validation').hidden=true;try{localStorage.removeItem(STORAGE_KEY);$('save-status').textContent='保存した入力を消しました';}catch{$('save-status').textContent='保存内容を消せませんでした。ブラウザの設定を確認しよう。';}$('action-status').textContent='入力を消しました。新しいアイデアを書いてみよう。';$('purpose').focus();motion.reset();});
 function showIssues(result){const container=$('validation');container.replaceChildren();for(const [items,title,warning]of [[result.errors,'入力・接続を確認してから、もう一度つくろう',false],[result.warnings.filter(w=>['missing-model','duplicate'].includes(w.kind)),'入力・登録の確認（未入力でも指示文は作れます）',true],[result.warnings.filter(w=>!['missing-model','duplicate'].includes(w.kind)),'先生・実機での確認（指示文にも入ります）',true]]){if(!items.length)continue;const box=el('div',warning?'issues warning':'issues'),ul=el('ul');box.append(el('p',null,title));for(const issue of items){const li=el('li'),link=el('a',null,issue.message);link.href='#'+issue.target;link.addEventListener('click',e=>{e.preventDefault();const target=issue.target==='ai-mode'?document.querySelector('[name=ai-mode]:checked'):$(issue.target);if(target)revealTarget(target);});li.append(link);ul.append(li);if(!warning){const node=$(issue.target);if(node)node.setAttribute('aria-invalid','true');}}box.append(ul);container.append(box);}container.hidden=!result.errors.length&&!result.warnings.length;}
-$('builder').addEventListener('submit',e=>{e.preventDefault();$('action-status').classList.remove('success-notice');if(activeStep!=='step6')return;clearTimeout(saveTimer);const result=validate(state);showIssues(result);if(result.errors.length){$('action-status').textContent=`まだ指示文をつくれません。${result.errors.length}件の入力を確認しよう。`;$('validation').focus();return;}if(state.prompt&&state.signature===inputSignature(state)&&$('prompt').value!==generatePrompt(state)&&!confirm('手直しした指示文を、入力からつくり直しますか？'))return;state.prompt=generatePrompt(state);state.signature=inputSignature(state);$('prompt').value=state.prompt;updateResult();save();$('action-status').textContent=result.warnings.length?'確認が必要なことを含めて、指示文をつくりました。内容を読んでからコピーしよう。':'指示文をつくりました。内容を読んで、専用Gemへコピーしよう。';playCue($('result'),'result-ready');$('result').scrollIntoView({block:'nearest'});});
-$('prompt').addEventListener('input',()=>{$('action-status').classList.remove('success-notice');state.prompt=$('prompt').value;save();updateResult();$('action-status').textContent='指示文を手直ししています。';});
-$('copy').addEventListener('click',async()=>{if(state.signature!==inputSignature(state)||!state.prompt.trim())return;try{if(!navigator.clipboard?.writeText)throw Error();await navigator.clipboard.writeText(state.prompt);$('action-status').textContent='コピーしました！ 専用Gemに貼り付けて送信しよう。';playCue($('action-status'),'success-notice');$('copy').textContent='✓ コピーしました';setTimeout(()=>{$('copy').textContent='指示文をコピー';},2200);}catch{$('prompt').focus();$('prompt').select();$('action-status').textContent='自動でコピーできませんでした。指示文を選択しました。Ctrl＋C（スマートフォンは長押し）でコピーしよう。';}});
+$('builder').addEventListener('submit',e=>{e.preventDefault();$('action-status').classList.remove('success-notice');if(activeStep!=='step6')return;clearTimeout(saveTimer);const result=validate(state);showIssues(result);motion.validate();if(result.errors.length){$('action-status').textContent=`まだ指示文をつくれません。${result.errors.length}件の入力を確認しよう。`;$('validation').focus();return;}if(state.prompt&&state.signature===inputSignature(state)&&$('prompt').value!==generatePrompt(state)&&!confirm('手直しした指示文を、入力からつくり直しますか？'))return;state.prompt=generatePrompt(state);state.signature=inputSignature(state);$('prompt').value=state.prompt;updateResult();save();$('action-status').textContent=result.warnings.length?'確認が必要なことを含めて、指示文をつくりました。内容を読んでからコピーしよう。':'指示文をつくりました。内容を読んで、専用Gemへコピーしよう。';motion.sync(state,activeStep);motion.generated();playCue($('result'),'result-ready');$('result').scrollIntoView({block:'nearest'});});
+$('prompt').addEventListener('input',()=>{$('action-status').classList.remove('success-notice');state.prompt=$('prompt').value;save();updateResult();motion.sync(state,activeStep);$('action-status').textContent='指示文を手直ししています。';});
+$('copy').addEventListener('click',async()=>{if(state.signature!==inputSignature(state)||!state.prompt.trim())return;try{if(!navigator.clipboard?.writeText)throw Error();await navigator.clipboard.writeText(state.prompt);$('action-status').textContent='コピーしました！ 専用Gemに貼り付けて送信しよう。';playCue($('action-status'),'success-notice');motion.copied(state.signature);$('copy').textContent='✓ コピーしました';setTimeout(()=>{$('copy').textContent='指示文をコピー';},2200);}catch{motion.failedCopy();$('prompt').focus();$('prompt').select();$('action-status').textContent='自動でコピーできませんでした。指示文を選択しました。Ctrl＋C（スマートフォンは長押し）でコピーしよう。';}});
 window.addEventListener('pagehide',()=>{clearTimeout(saveTimer);try{if(state.purpose||state.behavior||state.sensors.length||state.actuators.length||state.prompt||state.ai.mode!=='none')localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}});
 // Workshop navigation and equipment are views of the same v1 state.
 function goStep(id,focus=true){
  if(!/^step[1-6]$/.test(id))return;
- activeStep=id;
+ const previous=activeStep;activeStep=id;
  $('equipment').classList.remove('is-open');$('equipment-toggle').setAttribute('aria-expanded','false');$('equipment-toggle').textContent='発明セットを開く ↓';
  for(const panel of document.querySelectorAll('#builder > .card'))panel.hidden=panel.id!==id;
  for(const link of document.querySelectorAll('.step-nav nav a')){
@@ -110,9 +114,9 @@ function goStep(id,focus=true){
  }
  const step=Number(id.slice(4));$('previous-step').disabled=step===1;$('next-step').hidden=step===6;
  $('step-progress').textContent=step+' / 6';
- history.replaceState(null,'','#'+id);
- const panel=$(id);panel.classList.remove('panel-enter');void panel.offsetWidth;panel.classList.add('panel-enter');
- if(focus){const heading=panel.querySelector('h2');heading.tabIndex=-1;heading.focus({preventScroll:true});window.scrollTo({top:0,behavior:'instant'});}
+ if(focus||location.hash)history.replaceState(null,'','#'+id);
+ const panel=$(id);motion.sync(state,id);motion.panel(id,previous,focus);
+ if(focus){const heading=panel.querySelector('h2');heading.tabIndex=-1;heading.focus({preventScroll:true});}
 }
 function editDevice(key,id){
  editing[key]=id;renderList(key,key==='sensors'?'S':'A');
@@ -128,6 +132,7 @@ function revealTarget(target){
  target.scrollIntoView({block:'center'});target.focus();
 }
 function removeEquipment(key,id){
+ motion.removing([...document.querySelectorAll('.equipment-item')].find(n=>n.dataset.itemId===id));
  const item=state[key].find(i=>i.id===id);state[key]=state[key].filter(i=>i.id!==id);
  renderList(key,key==='sensors'?'S':'A');changed();
  $('equipment-message').textContent=findDevice(item.deviceId).name+'を外しました。';
@@ -195,16 +200,13 @@ function renderEquipment(){
   const actions=el('div','equipment-actions ai-actions'),edit=el('button','ai-edit','編集'),remove=el('button',null,'外す');
   edit.type=remove.type='button';edit.setAttribute('aria-label','AIの設定を編集');remove.setAttribute('aria-label','AIを外す');
   edit.addEventListener('click',()=>goStep('step3'));
-  remove.addEventListener('click',()=>{state.ai.mode='none';renderAI();changed();$('equipment-message').textContent='AIを発明セットから外しました。';$('review-settings').focus({preventScroll:true});});
+  remove.addEventListener('click',()=>{motion.removing(document.querySelector('.ai-equipment-item'));state.ai.mode='none';renderAI();changed();$('equipment-message').textContent='AIを発明セットから外しました。';$('review-settings').focus({preventScroll:true});});
   actions.append(edit,remove);card.append(actions);ai.append(card);
  }
  $('review-settings').textContent=result.errors.length?'⚠ 入力確認 '+result.errors.length+'件 · 最終チェックへ':'✓ 指示文を生成可能 · 最終チェックへ';
 }
-// Motion Prompt-inspired feedback: highlight only the item the user added.
-function animateEquip(deviceId,itemId){
+function announceEquip(deviceId){
  $('equipment-message').textContent=findDevice(deviceId).name+'を発明セットに追加しました。';
- const card=[...document.querySelectorAll('.equipment-item')].find(n=>n.dataset.itemId===itemId);
- playCue(card,'equipment-added');
 }
 function playCue(node,className){
  if(!node)return;

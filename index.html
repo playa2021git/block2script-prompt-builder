@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="使う装置と動かし方を選んで、Block2Script専用Gemに渡す指示文をつくろう。中学校 技術科のためのプロンプトメーカー。">
 <meta name="theme-color" content="#146b58"><title>Block2Script プロンプトメーカー</title>
-<link rel="icon" href="./assets/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./style.css">
+<link rel="icon" href="./assets/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./motion.css">
 <script type="module" src="./app.js"></script>
 </head>
 <body>
@@ -24,6 +24,6 @@
 <div class="panel-navigation"><button id="previous-step" type="button" class="button secondary">← 前の作業</button><span id="step-progress"></span><button id="next-step" type="button" class="button primary">次の作業 →</button></div>
 </form>
 <aside id="equipment" class="equipment" aria-labelledby="equipment-title"><div class="equipment-heading"><span class="eyebrow">MY INVENTION</span><h2 id="equipment-title">自分の発明 <span id="equipment-count" class="count">0個</span></h2><p>選んだ道具が、ここに集まります。</p><div id="equipment-overview" aria-label="発明セットの構成"></div><button id="equipment-toggle" type="button" aria-expanded="false" aria-controls="equipment-content">発明セットを開く ↓</button></div><p id="equipment-message" class="sr-only" role="status"></p><div id="equipment-content"><div class="invention-memo"><span>作品の目的</span><p id="purpose-summary"></p></div><section class="equipment-group sensor-equipment"><h3><span>S</span> 調べる道具</h3><div id="equipped-sensors"></div></section><section class="equipment-group actuator-equipment"><h3><span>A</span> 動かす道具</h3><div id="equipped-actuators"></div></section><section class="equipment-group ai-equipment"><h3><span>AI</span> 見分ける力</h3><div id="equipped-ai"></div></section><div class="invention-memo"><span>動作条件</span><p id="behavior-summary"></p></div><button id="review-settings" class="review-settings" type="button"></button><p class="equipment-note">入力済みでも、装置の対応・配線は先生と確認しよう。</p></div></aside></div>
-<footer><b>Block2Script プロンプトメーカー</b><span>考えるのは、きみ。AIは、つくるためのパートナー。</span><a href="./docs/device-support.md" target="_blank" rel="noopener">装置の対応状況と確認事項 ↗</a></footer>
+<footer><b>Block2Script プロンプトメーカー</b><span>考えるのは、きみ。AIは、つくるためのパートナー。</span><a href="./docs/device-support.md" target="_blank" rel="noopener">装置の対応状況と確認事項 ↗</a><a class="motion-credit" href="https://showheyohtaki.github.io/motion-prompt/" target="_blank" rel="noopener">動きの名前と仕様は Motion Prompt（大滝昇平 / MIT）を参考にしています</a></footer>
 </main>
 </body></html>
