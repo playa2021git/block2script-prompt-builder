@@ -442,11 +442,17 @@ input[readonly] {
   border-radius:12px;
   overflow:hidden;
   background:white;
-  transition:transform .17s,box-shadow .17s
+  transition:transform .3s cubic-bezier(.215,.61,.355,1),box-shadow .3s cubic-bezier(.215,.61,.355,1)
 }
-.device-tile:hover {
-  transform:translateY(-3px);
-  box-shadow:0 8px 16px #173b2512
+/* Motion Prompt #081: reduced from 10px to 2px for classroom use. */
+@media (hover:hover) and (pointer:fine) {
+  .device-tile:hover:has(.device-pick:hover) {
+    transform:translateY(-2px);
+    box-shadow:0 5px 12px #173b2514
+  }
+}
+.device-tile:focus-within {
+  box-shadow:0 0 0 2px #449b9266
 }
 .device-pick {
   border:0;
@@ -1496,3 +1502,37 @@ footer b {
 @media(max-width:700px){.sample-actions{width:100%;justify-content:stretch}.sample-actions .sample-button{flex:1 1 240px;white-space:normal}}
 #equipment-overview {min-width:0;grid-template-columns:minmax(0,1fr)}
 .overview-row {min-width:0}
+
+/* Inspired by Motion Prompt #080 and #056 · MIT (c) 2026 Shohei Ohtaki.
+   https://showheyohtaki.github.io/motion-prompt/
+   Adapted for quiet, one-shot feedback; no autoplay or floating overlay. */
+.result-heading label {
+  background:linear-gradient(#ffe36b88,#ffe36b88) left bottom / 100% .45em no-repeat;
+}
+.result-ready .result-heading label {
+  animation:result-marker .8s cubic-bezier(.215,.61,.355,1) both;
+}
+@keyframes result-marker {
+  from { background-size:0% .45em }
+  to { background-size:100% .45em }
+}
+.equipment-added { animation:equipment-added .6s ease-out }
+@keyframes equipment-added {
+  from { box-shadow:inset 0 0 0 2px #449b92; background:#eaf7f4 }
+  to { box-shadow:inset 0 0 0 2px transparent }
+}
+.action-status.success-notice {
+  color:#235b4d;
+  border-left:3px solid #449b92;
+  padding:8px 12px;
+  background:#eaf7f4;
+  border-radius:4px;
+  animation:notice-in .35s cubic-bezier(.215,.61,.355,1);
+}
+@keyframes notice-in {
+  from { opacity:.4; transform:translateY(4px) }
+  to { opacity:1; transform:translateY(0) }
+}
+@media(prefers-reduced-motion:reduce) {
+  .device-tile:hover:has(.device-pick:hover) { transform:none }
+}
