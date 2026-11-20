@@ -11,7 +11,7 @@ const page=await context.newPage(),errors=[],external=[];
 context.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));page.on('pageerror',e=>errors.push(e.message));
 context.on('request',r=>{if(!r.url().startsWith(new URL(base).origin))external.push(r.url());});
 await mkdir('work',{recursive:true});
-async function go(p,n){await p.locator(`.step-nav a[href="#step${n}"]`).click();assert.equal(await p.locator('#builder > .card:visible').count(),1);}
+async function go(p,n){await p.locator(`.step-nav a[href="#step${n}"]`).click();assert.equal(await p.locator('#builder > .card:visible').count(),1);assert.equal(await p.locator(`#step${n}`).isVisible(),true,`Step ${n} must be active after navigation`);}
 
 try{
  await page.goto(base);await page.waitForSelector('#sensor-choice optgroup',{state:'attached'});
@@ -91,18 +91,7 @@ try{
  await go(speech,6);
  assert.equal(await speech.locator('.preflight-link').count(),0);
  assert.match(await speech.locator('#preflight-message').textContent(),/必須項目がそろいました/);
- const stageInfo=await speech.evaluate(()=>{
-  const g=document.querySelector('#generate'),step=document.querySelector('#step6');
-  return {active:document.querySelector('.step-nav a.active')?.getAttribute('href'),hash:location.hash,
-   activeCards:[...document.querySelectorAll('#builder > .card')].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.id),
-   step6Hidden:step.hidden,step6Display:getComputedStyle(step).display,step6Rect:step.getBoundingClientRect().toJSON(),
-   generateHidden:g.hidden,generateDisplay:getComputedStyle(g).display,generateRect:g.getBoundingClientRect().toJSON(),
-   generateOffsetParent:g.offsetParent?.id||g.offsetParent?.tagName,
-   formChildren:[...document.querySelector('#step6').children].map(e=>e.id||e.tagName)};
- });
- console.log('speech-stage-debug:',JSON.stringify(stageInfo));
- assert.equal(await speech.locator('#step6').isVisible(),true,JSON.stringify(stageInfo));
- assert.equal(await speech.locator('#generate').isVisible(),true,JSON.stringify(stageInfo));
+ assert.equal(await speech.locator('#step6').isVisible(),true);
  await speech.locator('#generate').click();
  const speechPrompt=await speech.locator('#prompt').inputValue();
  assert.match(speechPrompt,/Speech2Scratch/);
