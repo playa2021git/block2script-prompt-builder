@@ -88,7 +88,8 @@ try{
  await go(speech,5);
  await speech.locator('#behavior').fill('話した用語の文字列を、用語とページ番号の対応表と照合して表示する。');
  assert.equal(await speech.locator('.nav-required[data-step="step5"]').isVisible(),false);
- await go(speech,6);
+ await speech.locator('#next-step').click();
+ assert.equal(await speech.locator('#step6').isVisible(),true,'Next button must open the final step');
  assert.equal(await speech.locator('.preflight-link').count(),0);
  assert.match(await speech.locator('#preflight-message').textContent(),/必須項目がそろいました/);
  assert.equal(await speech.locator('#step6').isVisible(),true);
