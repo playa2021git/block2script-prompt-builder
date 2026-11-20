@@ -1603,3 +1603,48 @@ footer b {
 #step5 .behavior-final .helper{font-size:14px;line-height:1.7}
 @media(max-width:1200px){#step5 .behavior-guide-grid{grid-template-columns:1fr}#step5 .behavior-guide-item p{min-height:0}}
 @media(max-width:700px){#step5 .behavior-guide{padding:12px}#step5 .behavior-flow span{font-size:13px}#step5 .behavior-guide-heading h3{font-size:18px}#step5 .behavior-guide-item{padding:10px}#step5 .behavior-guide-item label{font-size:16px}}
+
+
+/* Clarify Teachable Machine sound classification vs Speech2Scratch text recognition. */
+#step3 .ai-difference{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:13px 0 17px}
+#step3 .ai-difference p{margin:0;padding:13px;border:1px solid #c2d6d5;border-radius:12px;background:#f3f8f7;line-height:1.55;min-width:0}
+#step3 .ai-difference p:last-child{border-color:#c9bee7;background:#f8f5ff}
+#step3 .ai-difference strong{display:block;font-size:16px;color:#193e36}
+#step3 .ai-difference span{display:block;margin-top:5px;color:#374e49;font-size:14px}
+#step3 .ai-options label{font-size:16px;line-height:1.45;padding:12px;border:2px solid #d7e2dc}
+#step3 .ai-options label:has(input:checked){padding:12px;border:2px solid #7952ae;background:#f0e7fb;box-shadow:inset 0 0 0 1px #bc9de0}
+#step3 .ai-options b{font-size:17px;line-height:1.45;color:#1e3a34}
+#step3 .ai-options small{font-size:13px;line-height:1.5;color:#455e53}
+#step3 .ai-options input{margin-top:6px;flex-shrink:0;transform:scale(1.15)}
+#step3 .ai-options img{height:102px}
+#step3 .ai-options .speech-option{grid-column:1/-1;background:#f8f5ff}
+#step3 .speech-option .speech-symbol{display:flex;align-items:center;justify-content:center;gap:20px;height:90px;border-radius:9px;margin-bottom:10px;background:#eae3fa;font-size:36px;font-weight:900;color:#472c81}
+#step3 .speech-option .speech-symbol span{font-size:25px}
+#step3 .speech-option .speech-label{margin-top:4px;color:#3b5a70;font-weight:700}
+#step3 .speech-support{margin-top:16px;border:2px solid #cbbbed;border-radius:12px;background:#f7f4ff;padding:16px;color:#30234c}
+#step3 .speech-support strong{font-size:18px}
+#step3 .speech-support p{font-size:15px;line-height:1.75;margin:10px 0 0}
+.speech-equipment-icon{display:grid;place-items:center;width:66px;height:60px;border:2px solid #cbbbe6;border-radius:12px;background:#f0e9ff;font-size:32px}
+.step-nav nav>a{flex-wrap:wrap;align-content:center}
+.step-nav nav>a .nav-required{display:inline-block;margin-left:auto;flex:none;background:#ffe2c8;color:#78300b;border:1px solid #f0b17d;border-radius:7px;padding:2px 5px;font-size:11px;font-weight:900;font-style:normal}
+.step-nav nav>a.active .nav-required{background:#e6f5eb;color:#175340;border-color:#8abca1}
+.step-nav nav>a .nav-required[hidden]{display:none!important}
+.step-nav .progress-guide{margin:14px 4px 9px;border:1px solid #75bba0;border-radius:10px;padding:10px;background:#e6f5ed;color:#204937;font-size:13px;font-weight:800;line-height:1.55}
+.step-nav .progress-guide.needs-input{background:#fff1df;color:#6b3a12;border-color:#d6a475}
+#step6 .preflight{background:#fff6e9;color:#673816;border:2px solid #e5b57b;border-radius:13px;margin:16px 0 18px;padding:15px}
+#step6 .preflight.ready{background:#eaf7ef;color:#15543d;border-color:#a9cfb6}
+#step6 .preflight h3{font-size:19px;font-weight:900;margin:0 0 6px}
+#step6 .preflight p{font-size:16px;font-weight:700;line-height:1.6;margin:0}
+#step6 .preflight-list{display:grid;gap:9px;margin-top:10px}
+#step6 .preflight-list:empty{display:none}
+#step6 .preflight-link{display:block;width:100%;text-align:left;font-size:15px;line-height:1.5;font-weight:800;border-radius:10px;padding:11px 14px;border:2px solid #d5ae84;background:#fff;color:#5f3313}
+#step6 .preflight-link:hover{border-color:#9b6f44;background:#fffaf5}
+#step6 .preflight-link:focus-visible{outline:3px solid #8b83b8;outline-offset:2px}
+@media(max-width:690px){
+ #step3 .ai-difference{grid-template-columns:1fr}
+ #step3 .ai-options{grid-template-columns:1fr}
+ #step3 .ai-options .speech-option{grid-column:auto}
+ #step3 .speech-option .speech-symbol{height:70px}
+ #step6 .preflight{padding:12px}
+ .step-nav nav>a .nav-required{font-size:10px;padding:1px 4px}
+}
