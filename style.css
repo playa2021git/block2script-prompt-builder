@@ -1653,3 +1653,12 @@ footer b {
 .step-nav nav>a{position:relative;flex-wrap:nowrap;min-height:62px;padding-bottom:17px}
 .step-nav nav>a .nav-required{position:absolute;right:6px;bottom:3px;margin:0;font-size:10px;line-height:1.2;padding:2px 5px;pointer-events:none}
 @media(max-width:600px){.step-nav nav>a{min-height:69px;padding-bottom:20px}.step-nav nav>a .nav-required{font-size:9px;right:3px;bottom:3px}}
+
+
+/* Keep the left navigation within Chromebook viewport: no sticky over-height hit targets. */
+@media(min-width:901px){
+ .step-nav{max-height:calc(100dvh - 106px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#789b8a transparent;scroll-padding-bottom:16px}
+ .step-nav nav>a{min-height:53px;padding-top:7px;padding-bottom:15px}
+ .step-nav .progress-guide{margin:9px 4px 7px;padding:7px 8px;line-height:1.35;font-size:12px}
+}
+@media(max-width:900px){.step-nav{max-height:none;overflow:visible}}
