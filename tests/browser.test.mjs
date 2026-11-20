@@ -11,7 +11,7 @@ const page=await context.newPage(),errors=[],external=[];
 context.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));page.on('pageerror',e=>errors.push(e.message));
 context.on('request',r=>{if(!r.url().startsWith(new URL(base).origin))external.push(r.url());});
 await mkdir('work',{recursive:true});
-async function go(p,n){await p.locator(`.step-nav a[href="#step${n}"]`).click();assert.equal(await p.locator('#builder > .card:visible').count(),1);assert.equal(await p.locator(`#step${n}`).isVisible(),true,`Step ${n} must be active after navigation`);}
+async function go(p,n){const link=p.locator(`.step-nav a[href="#step${n}"]`);await link.focus();await link.press("Enter");await p.locator(`#step${n}`).waitFor({state:"visible",timeout:6000});assert.equal(await p.locator("#builder > .card:visible").count(),1);}
 
 try{
  await page.goto(base);await page.waitForSelector('#sensor-choice optgroup',{state:'attached'});
