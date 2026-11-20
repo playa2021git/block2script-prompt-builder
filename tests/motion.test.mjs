@@ -16,6 +16,20 @@ try{
  await page.locator('#purpose').focus();assert.equal(await page.locator('.typing-hint:visible').count(),0);
  await page.locator('#purpose').blur();assert.match(await page.locator('#purpose-motion-help').textContent(),/Gem/);
  await page.locator('#purpose').fill('発明の目的');assert.equal(await page.locator('#purpose-motion-help').isVisible(),false);assert.equal(await page.locator('.step-nav a[href="#step1"]').getAttribute('class').then(s=>s.includes('motion-complete')),true);
+ await go(3);
+ // Regression: selected borders must not cross text on step 3.
+ assert.equal(await page.locator('.motion-selection').count(),0);
+ assert.equal(await page.locator('.ai-options label:has(input:checked)').count(),1);
+ assert.equal(await page.locator('.ai-options label:has(input:checked)').evaluate(el=>getComputedStyle(el).borderTopWidth),'2px');
+ await page.locator('[name=ai-mode][value=image]').check();
+ assert.equal(await page.locator('.ai-options label:has(input:checked) input').inputValue(),'image');
+ assert.equal(await page.locator('.motion-selection').count(),0);
+ await go(6);
+ // The same is true when switching between Gem prompt modes.
+ assert.equal(await page.locator('.prompt-mode label:has(input:checked)').count(),1);
+ await page.locator('[name=prompt-mode][value=precise]').check();
+ assert.equal(await page.locator('.prompt-mode label:has(input:checked) input').inputValue(),'precise');
+ assert.equal(await page.locator('.motion-selection').count(),0);
  await go(2);
  // Ten rapid programmatic clicks must not lose updates; <=3 flights and eventual cleanup.
  await page.locator('[data-device-id="soil"].device-pick').evaluate(node=>{for(let i=0;i<10;i++)document.querySelector('[data-device-id="soil"].device-pick').click();});
