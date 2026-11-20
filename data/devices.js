@@ -27,7 +27,8 @@ export const DEVICES = [
 export const AI_MODES = {
  none:{name:'使わない'},
  image:{name:'画像認識',support:'TM2Scratchに画像モデルURL・ラベル・イベントの命令あり。'},
- sound:{name:'音声認識',support:'TM2Scratchに音声モデルURL・ラベル・イベントの命令あり。学校端末のマイクで確認してください。'},
+ sound:{name:'音の分類（Teachable Machine）',support:'TM2Scratchで学習した音のラベルを判定します。話した自由な文章を文字へ変換する機能ではありません。'},
+ speech:{name:'音声認識（音声→文字）',support:'Speech2Scratchで話した言葉を文字データへ変換します。マイク許可・認識環境を確認してください。'},
  pose:{name:'ポーズ認識',support:'Teachable Machineのポーズ分類モデルのB2S連携は未確認。PoseNet2Scratchの姿勢検出を同じ対応とは扱いません。'}
 };
 export const findDevice = id => DEVICES.find(d=>d.id===id);

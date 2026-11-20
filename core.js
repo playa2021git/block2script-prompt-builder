@@ -1,4 +1,4 @@
-import {findDevice,AI_MODES} from './data/devices.js';
+import {findDevice,AI_MODES} from './data/devices.js?v=speech-guide-1';
 export const PROMPT_MODES={auto:'AIにおまかせ',precise:'自分で細かく決める'};
 export const promptMode=s=>typeof s.promptMode==='string'&&Object.hasOwn(PROMPT_MODES,s.promptMode)?s.promptMode:'auto';
 export const STORAGE_KEY='b2s-prompt-maker-v1';
@@ -71,12 +71,12 @@ export function validate(s){
 
  }
  if(!Object.hasOwn(AI_MODES,s.ai.mode))add(errors,'③ AIの種類を選び直そう。','ai-mode');
- if(s.ai.mode!=='none'){
+ if(['image','sound','pose'].includes(s.ai.mode)){
   const classes=s.ai.classes.split(/\r?\n/);
   if(classes.some(c=>!c.trim()))add(errors,'③ Class名は1行に1つ。空の行にも名前を入れるか、その行を消そう。','classes');
   if(new Set(classes).size!==classes.length)add(errors,'③ 同じClass名が重複しています。','classes');
   if(s.ai.url){try{const u=new URL(s.ai.url);if(u.protocol!=='https:'||u.hostname!=='teachablemachine.withgoogle.com'||!/^\/models\/[^/]+\/?$/.test(u.pathname)||u.search||u.hash)throw Error();}catch{add(errors,'③ モデルURLはTeachable Machineの共有URL（https://teachablemachine.withgoogle.com/models/…/）を入力しよう。','model-url');}}
-  if(!s.ai.url)add(warnings,'モデルURLは未入力です。画像・音声認識などで必要なら、実際の共有URLを確認してください。','model-url','missing-model');
+  if(!s.ai.url)add(warnings,'モデルURLは未入力です。画像・音の分類・ポーズ認識などで必要なら、実際の共有URLを確認してください。','model-url','missing-model');
   if(s.ai.mode==='pose')add(warnings,AI_MODES.pose.support,'ai-mode','support');
  }
  return {errors,warnings:[...new Map(warnings.map(w=>[w.message,w])).values()]};
@@ -94,7 +94,8 @@ export function generatePrompt(s){
    if(item.note)out.push('  メモ：'+item.note);
   });
  }
- if(s.ai.mode!=='none')out.push('','【Teachable Machine】',`種類：${AI_MODES[s.ai.mode].name}`,'Class名（JSONの各文字列を大小文字・前後の空白も含めて正確に使用）：',JSON.stringify(s.ai.classes.split(/\r?\n/)),`モデルURL：${s.ai.url||'未入力。認識の実行に必要なら、実際の共有URLだけを確認してください。架空のURLで実行可能とはしないでください。'}`);
+ if(['image','sound','pose'].includes(s.ai.mode))out.push('','【Teachable Machine】',`種類：${AI_MODES[s.ai.mode].name}`,'Class名（JSONの各文字列を大小文字・前後の空白も含めて正確に使用）：',JSON.stringify(s.ai.classes.split(/\r?\n/)),`モデルURL：${s.ai.url||'未入力。認識の実行に必要なら、実際の共有URLだけを確認してください。架空のURLで実行可能とはしないでください。'}`);
+  if(s.ai.mode==='speech')out.push('','【音声認識：Speech2Scratch】','目的：話した単語や言葉を文字データへ変換し、その文字列をプログラムで利用します。Teachable Machineの音の分類とは別機能です。','Speech2Scratch拡張で現在読み込み済みの命令だけを使用してください。存在しない認識命令や通常JavaScriptの音声認識APIを創作しないでください。','Class名・TMモデルURLは不要です。単語帳の検索などは、認識した文字列を照合するための単語とページ番号の対応データが別途必要です。','マイクの許可・対応ブラウザ・ネットワーク等で音声文字変換に失敗することがあります。使える命令・対応環境を確認し、認識できない場合の処理も考えてください。');
  out.push('','【動作条件】',s.behavior);
  const notices=result.warnings.filter(w=>w.kind!=='wiring'&&w.kind!=='missing-model');
  if(notices.length)out.push('','【個別の確認事項】',...notices.map(w=>'・'+w.message));

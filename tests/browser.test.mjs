@@ -59,6 +59,50 @@ try{
  await guided.locator('#guide-action').fill('<img src=x onerror=alert(1)>');
  assert.equal(await guided.locator('#step5 img[src="x"]').count(),0);
  await guidedContext.close();
+
+ // Speech-to-text uses Speech2Scratch, without Teachable Machine class/model fields.
+ // Essential fields are highlighted before the final submit.
+ const speechContext=await browser.newContext({viewport:{width:1366,height:768}});
+ speechContext.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));
+ const speech=await speechContext.newPage();await speech.goto(base);
+ assert.equal(await speech.locator('.nav-required[data-step="step1"]').isVisible(),true);
+ assert.equal(await speech.locator('.nav-required[data-step="step5"]').isVisible(),true);
+ await go(speech,6);
+ assert.match(await speech.locator('#preflight-message').textContent(),/2件/);
+ assert.equal(await speech.locator('.preflight-link').count(),2);
+ await speech.locator('.preflight-link').first().click();
+ assert.equal(await speech.locator('#step1').isVisible(),true);
+ await speech.locator('#purpose').fill('音声で歴史用語のページを探す');
+ assert.equal(await speech.locator('.nav-required[data-step="step1"]').isVisible(),false);
+ await go(speech,3);
+ assert.match(await speech.locator('label:has([name="ai-mode"][value="sound"])').textContent(),/音の分類/);
+ assert.match(await speech.locator('label:has([name="ai-mode"][value="speech"])').textContent(),/音声認識/);
+ await speech.locator('[name=ai-mode][value=speech]').check();
+ assert.equal(await speech.locator('#ai-fields').isVisible(),false);
+ assert.equal(await speech.locator('#speech-fields').isVisible(),true);
+ assert.match(await speech.locator('#equipped-ai').textContent(),/Speech2Scratch/);
+ assert.doesNotMatch(await speech.locator('#equipped-ai').textContent(),/Class名は未設定/);
+ await go(speech,6);
+ assert.equal(await speech.locator('.preflight-link').count(),1);
+ assert.match(await speech.locator('#preflight-message').textContent(),/1件/);
+ await go(speech,5);
+ await speech.locator('#behavior').fill('話した用語の文字列を、用語とページ番号の対応表と照合して表示する。');
+ assert.equal(await speech.locator('.nav-required[data-step="step5"]').isVisible(),false);
+ await go(speech,6);
+ assert.equal(await speech.locator('.preflight-link').count(),0);
+ assert.match(await speech.locator('#preflight-message').textContent(),/必須項目がそろいました/);
+ await speech.locator('#generate').click();
+ const speechPrompt=await speech.locator('#prompt').inputValue();
+ assert.match(speechPrompt,/Speech2Scratch/);
+ assert.doesNotMatch(speechPrompt,/【Teachable Machine】/);
+ assert.doesNotMatch(speechPrompt,/モデルURL：/);
+ await go(speech,3);
+ await speech.locator('[name=ai-mode][value=sound]').check();
+ assert.equal(await speech.locator('#ai-fields').isVisible(),true);
+ assert.equal(await speech.locator('#speech-fields').isVisible(),false);
+ assert.equal(await speech.locator('.nav-required[data-step="step3"]').isVisible(),true);
+ await speech.screenshot({path:'work/sound-classification-vs-speech.png',animations:'disabled',fullPage:true});
+ await speechContext.close();
  // Keyboard addition, repeated devices, removal, and built-in/external connection fields.
  await go(page,2);const buttons=page.locator('button.device-pick[data-device-id=buttons]');await buttons.focus();await page.keyboard.press('Enter');
  assert.equal(await page.locator('#sensor-list .device-item').count(),1);
