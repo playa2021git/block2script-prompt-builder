@@ -1543,7 +1543,7 @@ footer b {
   background:#f0e9fb;
   box-shadow:inset 0 0 0 1px #cfb6ea;
 }
-.ai-options label:first-child > span {
+.ai-options label:first-of-type > span {
   display:flex;
   align-items:center;
   justify-content:center;
