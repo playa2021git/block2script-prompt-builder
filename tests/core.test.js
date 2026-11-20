@@ -3,6 +3,28 @@ import assert from 'node:assert/strict';
 import {DEVICES,findDevice} from '../data/devices.js';
 import {emptyState,sampleState,wateringSampleState,validate,generatePrompt,restoreState,inputSignature,makeItem,composeBehaviorGuide,emptyBehaviorGuide} from '../core.js';
 const valid=()=>({...emptyState(),purpose:'温度を知らせる',behavior:'温度が高くなったら画面に表示する'});
+
+test('音の分類とSpeech2Scratch音声文字変換を分ける',()=>{
+ const s=valid();
+ s.ai={mode:'sound',classes:'拍手\n犬の鳴き声',url:''};
+ let p=generatePrompt(s);
+ assert.match(p,/【Teachable Machine】/);
+ assert.match(p,/音の分類/);
+ assert.match(p,/Class名/);
+ s.ai={mode:'speech',classes:'古いClass\n古いClass',url:'not-a-model-url'};
+ assert.equal(validate(s).errors.length,0);
+ p=generatePrompt(s);
+ assert.match(p,/【音声認識：Speech2Scratch】/);
+ assert.match(p,/文字データ/);
+ assert.match(p,/マイクの許可/);
+ assert.doesNotMatch(p,/【Teachable Machine】/);
+ assert.doesNotMatch(p,/Class名（JSON/);
+ assert.doesNotMatch(p,/モデルURL：/);
+ const restored=restoreState(JSON.stringify(s));
+ assert.equal(restored.ai.mode,'speech');
+ assert.equal(validate(restored).errors.length,0);
+ assert.ok(generatePrompt(restored).includes('Speech2Scratch'));
+});
 test('SとAを別々に管理し、装置設定に必要な接続仕様がある',()=>{assert.equal(DEVICES.length,16);for(const d of DEVICES){assert.ok(['S','A'].includes(d.group));assert.equal(d.builtIn,d.fields.length===0);assert.ok(d.support);}assert.equal(findDevice('distance').fields.filter(f=>f.kind==='pin').length,2);assert.equal(findDevice('scale').fields.filter(f=>f.sharing==='i2c').length,2);});
 test('必須項目が不足すると生成しない',()=>{assert.equal(validate(emptyState()).errors.length,2);assert.throws(()=>generatePrompt(emptyState()));});
 test('使わない機能・装置を指示文に入れない',()=>{const p=generatePrompt(valid());assert.ok(!p.includes('【Teachable Machine】'));assert.ok(!p.includes('【S：'));assert.ok(!p.includes('【A：'));assert.ok(!p.includes('ポンプ'));});
