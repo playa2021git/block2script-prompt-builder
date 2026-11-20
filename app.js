@@ -1,4 +1,4 @@
-import {initMotion} from './motion.js';
+import {initMotion} from './motion.js?v=selection-fix-1';
 import {DEVICES,AI_MODES,findDevice} from './data/devices.js';
 import {STORAGE_KEY,emptyState,sampleState,wateringSampleState,restoreState,makeItem,validate,generatePrompt,inputSignature} from './core.js';
 const imagePath=id=>`./assets/devices/${id}.svg`;

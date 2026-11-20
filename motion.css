@@ -31,9 +31,9 @@
 .motion-nav-indicator {position:absolute;left:0;top:0;pointer-events:none;z-index:-1;box-sizing:border-box;border-bottom:3px solid #c7e9a0;border-radius:9px;transition:transform var(--dur-base) var(--ease-standard)}
 .motion-copied {outline:2px solid #b5d98f;outline-offset:-2px}
 @keyframes motion-line {from{transform:scaleX(0)}to{transform:scaleX(1)}}
-/* #060 */
+/* #060: selected radio cards are highlighted in place, not by a floating border. */
 .ai-options,.prompt-mode {position:relative;isolation:isolate}
-.motion-selection {position:absolute;pointer-events:none;border:2px solid #449b92;border-radius:10px;box-sizing:border-box;z-index:1}
+.motion-selection {display:none!important}
 /* #001 / #071 */
 .device-pick {position:relative}
 .motion-quantity {position:absolute;right:9px;top:9px;display:grid;place-items:center;min-width:25px;height:25px;padding:0 5px;border-radius:20px;background:#146b58;color:white;border:2px solid #fff;font-weight:800;box-sizing:border-box}
