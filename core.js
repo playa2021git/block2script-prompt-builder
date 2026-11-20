@@ -71,12 +71,12 @@ export function validate(s){
 
  }
  if(!Object.hasOwn(AI_MODES,s.ai.mode))add(errors,'③ AIの種類を選び直そう。','ai-mode');
- if(s.ai.mode!=='none'){
+ if(['image','sound','pose'].includes(s.ai.mode)){
   const classes=s.ai.classes.split(/\r?\n/);
   if(classes.some(c=>!c.trim()))add(errors,'③ Class名は1行に1つ。空の行にも名前を入れるか、その行を消そう。','classes');
   if(new Set(classes).size!==classes.length)add(errors,'③ 同じClass名が重複しています。','classes');
   if(s.ai.url){try{const u=new URL(s.ai.url);if(u.protocol!=='https:'||u.hostname!=='teachablemachine.withgoogle.com'||!/^\/models\/[^/]+\/?$/.test(u.pathname)||u.search||u.hash)throw Error();}catch{add(errors,'③ モデルURLはTeachable Machineの共有URL（https://teachablemachine.withgoogle.com/models/…/）を入力しよう。','model-url');}}
-  if(!s.ai.url)add(warnings,'モデルURLは未入力です。画像・音声認識などで必要なら、実際の共有URLを確認してください。','model-url','missing-model');
+  if(!s.ai.url)add(warnings,'モデルURLは未入力です。画像・音の分類・ポーズ認識などで必要なら、実際の共有URLを確認してください。','model-url','missing-model');
   if(s.ai.mode==='pose')add(warnings,AI_MODES.pose.support,'ai-mode','support');
  }
  return {errors,warnings:[...new Map(warnings.map(w=>[w.message,w])).values()]};
