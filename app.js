@@ -1,6 +1,6 @@
 import {initMotion} from './motion.js?v=selection-fix-1';
 import {DEVICES,AI_MODES,findDevice} from './data/devices.js';
-import {STORAGE_KEY,emptyState,sampleState,wateringSampleState,restoreState,makeItem,validate,generatePrompt,inputSignature} from './core.js';
+import {STORAGE_KEY,emptyState,sampleState,wateringSampleState,restoreState,makeItem,validate,generatePrompt,inputSignature,composeBehaviorGuide} from './core.js';
 const imagePath=id=>`./assets/devices/${id}.svg`;
 const $=id=>document.getElementById(id);
 let state=emptyState(),saveTimer,storageAvailable=true;
@@ -88,8 +88,42 @@ function renderList(key,group){const list=$(key==='sensors'?'sensor-list':'actua
  });
 }
 function renderAI(){const mode=state.ai.mode;$('ai-fields').hidden=mode==='none';$('ai-support').textContent=AI_MODES[mode]?.support??'';$('class-count').textContent=(state.ai.classes?state.ai.classes.split(/\r?\n/).filter(c=>c.trim()).length:0)+'クラス';for(const input of document.querySelectorAll('[name=ai-mode]'))input.checked=input.value===mode;}
-function render(){for(const radio of document.querySelectorAll('[name=prompt-mode]'))radio.checked=radio.value===state.promptMode;fillChoices('sensor-choice','S');fillChoices('actuator-choice','A');$('purpose').value=state.purpose;$('behavior').value=state.behavior;$('classes').value=state.ai.classes;$('model-url').value=state.ai.url;$('prompt').value=state.prompt;renderList('sensors','S');renderList('actuators','A');renderAI();updateResult();renderEquipment();motion.sync(state,activeStep);}
+const guideKeys=['start','action','stop','restart'];
+function renderBehaviorGuide(){
+ const guide=state.behaviorGuide??{};
+ const composed=composeBehaviorGuide(guide);
+ const preview=$('behavior-preview'),apply=$('apply-behavior'),warn=$('behavior-guide-warning');
+ preview.textContent=composed||'①「いつ始める？」と②「何をする？」を短く書いてみよう。';
+ apply.disabled=!composed;
+ const missing=[];
+ if(!guide.start?.trim())missing.push('①開始条件');
+ if(!guide.action?.trim())missing.push('②行う動作');
+ const needsStop=state.actuators.some(item=>['pump','servo','vibrator'].includes(item.deviceId));
+ const notes=[];
+ const started=guideKeys.some(k=>guide[k]?.trim());
+ if(started&&missing.length)notes.push('説明文にまとめるには'+missing.join('・')+'を書こう。');
+ if(started&&needsStop&&!guide.stop?.trim())notes.push('ポンプ・モーターなどの停止条件と安全対策を考えよう。');
+ if(started&&needsStop&&!guide.restart?.trim())notes.push('連続動作を防ぐ再動作条件も確認しよう。');
+ warn.hidden=!notes.length;
+ warn.textContent=notes.join(' ');
+}
+function render(){for(const radio of document.querySelectorAll('[name=prompt-mode]'))radio.checked=radio.value===state.promptMode;fillChoices('sensor-choice','S');fillChoices('actuator-choice','A');$('purpose').value=state.purpose;$('behavior').value=state.behavior;for(const key of guideKeys)$('guide-'+key).value=state.behaviorGuide?.[key]??'';renderBehaviorGuide();$('behavior-guide-status').textContent='';$('classes').value=state.ai.classes;$('model-url').value=state.ai.url;$('prompt').value=state.prompt;renderList('sensors','S');renderList('actuators','A');renderAI();updateResult();renderEquipment();motion.sync(state,activeStep);}
 for(const [id,key]of [['purpose','purpose'],['behavior','behavior']])$(id).addEventListener('input',()=>{state[key]=$(id).value;changed();});
+for(const key of guideKeys)$('guide-'+key).addEventListener('input',()=>{
+ state.behaviorGuide[key]=$('guide-'+key).value;
+ save();renderBehaviorGuide();
+ $('behavior-guide-status').textContent='入力補助を保存しました。説明文に使う場合は「下の説明文に反映する」を押そう。';
+});
+$('apply-behavior').addEventListener('click',()=>{
+ const draft=composeBehaviorGuide(state.behaviorGuide);
+ if(!draft)return;
+ if(state.behavior.trim()&&state.behavior!==draft&&!confirm('下の動作説明には別の文章があります。4つの質問でまとめた文章に置き換えますか？'))return;
+ state.behavior=draft;$('behavior').value=draft;
+ changed();
+ $('behavior-guide-status').textContent='動作説明に反映しました。内容を確かめ、必要なら下で書き直そう。';
+ $('behavior').focus({preventScroll:true});
+ $('behavior').scrollIntoView({block:'nearest',behavior:'instant'});
+});
 for(const [id,key]of [['classes','classes'],['model-url','url']])$(id).addEventListener('input',()=>{state.ai[key]=$(id).value;renderAI();changed();});
 for(const radio of document.querySelectorAll('[name=prompt-mode]'))radio.addEventListener('change',()=>{state.promptMode=radio.value;changed();});
 for(const radio of document.querySelectorAll('[name=ai-mode]'))radio.addEventListener('change',()=>{const origin=motion.source(radio.nextElementSibling.querySelector('img'));state.ai.mode=radio.value;renderAI();changed();if(radio.value!=='none')motion.added(origin,null,'ai');});

@@ -25,6 +25,40 @@ try{
  }
  await page.evaluate(async()=>{for(const img of document.images)img.loading='eager';await Promise.all([...document.images].map(img=>img.decode()));});
  assert.equal(await page.locator('img').evaluateAll(imgs=>imgs.every(i=>i.complete&&i.naturalWidth>0)),true);
+ // Step 5: help for beginners, manual confirmation, saved drafts and prompt output.
+ const guidedContext=await browser.newContext({viewport:{width:1366,height:768}});
+ guidedContext.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));
+ const guided=await guidedContext.newPage();await guided.goto(base);
+ await go(guided,1);await guided.locator('#purpose').fill('猫用の自動給水装置');
+ await go(guided,5);
+ assert.equal(await guided.locator('#apply-behavior').isDisabled(),true);
+ assert.equal(await guided.locator('#behavior').inputValue(),'');
+ await guided.locator('#guide-start').fill('AIカメラが猫を認識し、重量が40g以下');
+ await guided.locator('#guide-action').fill('ポンプを作動させて水を出す');
+ assert.equal(await guided.locator('#apply-behavior').isEnabled(),true);
+ assert.match(await guided.locator('#behavior-preview').textContent(),/40g以下/);
+ assert.equal(await guided.locator('#behavior').inputValue(),'');
+ await guided.locator('#guide-stop').fill('重量が50g以上になったら停止する');
+ await guided.locator('#guide-restart').fill('猫がいったん離れて、再び来たとき');
+ assert.match(await guided.locator('#behavior-preview').textContent(),/50g以上/);
+ await guided.locator('#apply-behavior').click();
+ const guidedText=await guided.locator('#behavior').inputValue();
+ for(const label of ['【開始条件】','【行う動作】','【停止条件】','【再動作条件】'])assert.ok(guidedText.includes(label));
+ await guided.waitForTimeout(320);await guided.reload();await go(guided,5);
+ assert.equal(await guided.locator('#guide-start').inputValue(),'AIカメラが猫を認識し、重量が40g以下');
+ assert.equal(await guided.locator('#behavior').inputValue(),guidedText);
+ await guided.screenshot({path:'work/step5-guidance.png',animations:'disabled',fullPage:true});
+ await go(guided,6);await guided.locator('#generate').click();
+ assert.match(await guided.locator('#prompt').inputValue(),/【再動作条件】/);
+ await go(guided,5);await guided.locator('#behavior').fill('自分で書き直した説明文');
+ await guided.locator('#guide-stop').fill('別の停止条件');
+ assert.equal(await guided.locator('#behavior').inputValue(),'自分で書き直した説明文');
+ guided.once('dialog',dialog=>dialog.dismiss());
+ await guided.locator('#apply-behavior').click();
+ assert.equal(await guided.locator('#behavior').inputValue(),'自分で書き直した説明文');
+ await guided.locator('#guide-action').fill('<img src=x onerror=alert(1)>');
+ assert.equal(await guided.locator('#step5 img[src="x"]').count(),0);
+ await guidedContext.close();
  // Keyboard addition, repeated devices, removal, and built-in/external connection fields.
  await go(page,2);const buttons=page.locator('button.device-pick[data-device-id=buttons]');await buttons.focus();await page.keyboard.press('Enter');
  assert.equal(await page.locator('#sensor-list .device-item').count(),1);

@@ -1559,3 +1559,47 @@ footer b {
 }
 .prompt-mode label span > b {font-size:16px;line-height:1.5}
 .prompt-mode label span > small {font-size:14px;line-height:1.55;color:#3c564c}
+
+
+/* Step 5: guided planning without replacing the existing free-form editor. */
+#step5 .card-heading{margin-bottom:12px}
+#step5 .behavior-lead{margin:4px 0 14px;font-size:17px;line-height:1.7;color:#263f37}
+#step5 .behavior-lead strong{color:#12644e}
+#step5 .behavior-flow{display:flex;align-items:center;gap:7px;margin-bottom:16px;flex-wrap:wrap}
+#step5 .behavior-flow span{display:inline-block;flex:1 1 115px;text-align:center;border-radius:10px;padding:9px 7px;font-size:15px;font-weight:800;background:#e9f1f6;color:#254b65}
+#step5 .behavior-flow span:nth-of-type(2){background:#fff0d7;color:#7b4e13}
+#step5 .behavior-flow span:nth-of-type(3){background:#e0f4e9;color:#175e45}
+#step5 .behavior-flow b{font-size:19px;color:#697e74}
+#step5 .behavior-guide{border:2px solid #b5d5c6;border-radius:15px;padding:17px;background:#f8fcf9;min-width:0}
+#step5 .behavior-guide-heading{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between;margin:0 0 14px}
+#step5 .behavior-guide-heading h3{font-size:20px;font-weight:900;color:#194b3d}
+#step5 .behavior-guide-heading>span{font-size:13px;color:#47695c;font-weight:700}
+#step5 .behavior-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+#step5 .behavior-guide-item{border:1px solid #d3e1d9;border-radius:12px;background:#fff;padding:12px;min-width:0}
+#step5 .behavior-guide-item label{display:flex;gap:9px;align-items:center;margin:0;font-size:17px;line-height:1.4;color:#1d3f37}
+#step5 .behavior-guide-item label>span:last-child{min-width:0;flex:1}
+#step5 .behavior-guide-item label small{display:block;margin:3px 0 0;color:#48695b;font-size:12px;font-weight:700}
+#step5 .guide-number{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:9px;background:#17735b;color:#fff;font-size:18px;font-weight:900}
+#step5 .behavior-guide-item p{margin:8px 0;min-height:2.8em;font-size:14px;line-height:1.45;color:#3c5a4f}
+#step5 .behavior-guide-item textarea{min-height:88px;height:auto;font-size:16px;line-height:1.52;padding:10px 11px;background:#fff;border:2px solid #bdcfc3;color:#152d26}
+#step5 .behavior-guide-item textarea::placeholder{color:#5a7068;opacity:1}
+#step5 .behavior-guide-item textarea:focus-visible{outline:3px solid #89cab7;outline-offset:1px;border-color:#146c55}
+#step5 .behavior-examples{margin-top:14px;border:1px solid #bbd4c0;border-radius:11px;background:#f0f7ee;padding:10px 12px}
+#step5 .behavior-examples summary{cursor:pointer;line-height:1.6;font-weight:800;color:#1d604a;font-size:16px}
+#step5 .behavior-example-list p{font-size:15px;line-height:1.65;margin:10px 0;color:#2d4e40}
+#step5 .behavior-guide-warning{margin:14px 0 0;padding:12px 14px;border-left:5px solid #c18538;border-radius:8px;background:#fff6e6;color:#6b431c;font-size:15px;line-height:1.6;font-weight:700}
+#step5 .behavior-guide-warning[hidden]{display:none}
+#step5 .behavior-compose{margin-top:14px;padding:16px;border-radius:12px;border:2px solid #b6d8cf;background:#eef8f5}
+#step5 .behavior-compose strong{font-size:18px;color:#124b39}
+#step5 .behavior-preview{white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0 13px;padding:13px 15px;border:1px solid #d2dfd7;border-radius:9px;background:#fff;color:#1d3c35;font-size:16px;line-height:1.72}
+#step5 #apply-behavior{display:block;width:100%;padding:12px 15px;min-height:52px;font-size:18px;font-weight:900;background:#176d55;color:#fff;border-radius:10px}
+#step5 #apply-behavior:disabled{opacity:.58;cursor:not-allowed}
+#step5 .behavior-guide-status{min-height:1.5em;margin:9px 0 0;color:#265a48;font-size:14px;line-height:1.5}
+#step5 .behavior-final{border-top:2px solid #e3ebe4;padding-top:18px;margin-top:20px}
+#step5 .behavior-final label{margin-bottom:5px;font-size:18px;color:#1b4d3b}
+#step5 .behavior-final>p{font-size:15px;line-height:1.65;color:#385b4b;margin:0 0 10px}
+#step5 #behavior{font-size:16px;line-height:1.7;min-height:180px;border:2px solid #c0d3c8}
+#step5 #behavior:focus-visible{outline:3px solid #8bc4ab;outline-offset:1px}
+#step5 .behavior-final .helper{font-size:14px;line-height:1.7}
+@media(max-width:1200px){#step5 .behavior-guide-grid{grid-template-columns:1fr}#step5 .behavior-guide-item p{min-height:0}}
+@media(max-width:700px){#step5 .behavior-guide{padding:12px}#step5 .behavior-flow span{font-size:13px}#step5 .behavior-guide-heading h3{font-size:18px}#step5 .behavior-guide-item{padding:10px}#step5 .behavior-guide-item label{font-size:16px}}
