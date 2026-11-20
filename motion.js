@@ -94,13 +94,12 @@ export function initMotion(){
   for(const node of document.querySelectorAll('.equipment-empty')){if(!node.querySelector('svg')){const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 32 28');icon.setAttribute('aria-hidden','true');icon.classList.add('motion-empty-icon');const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M3 8 16 2 29 8 29 22 16 27 3 22Z M3 8 16 14 29 8 M16 14V27');icon.append(path);node.prepend(icon);}}
   dock.textContent='自分の発明 '+(state.sensors.length+state.actuators.length)+'個';dock.setAttribute('aria-expanded',$('equipment-toggle').getAttribute('aria-expanded'));
   for(const id of ['sensor-count','actuator-count','equipment-count']){const badge=$(id);badge.setAttribute('aria-live','polite');badge.setAttribute('aria-atomic','true');}
-  moveIndicator();for(const group of document.querySelectorAll('.ai-options,.prompt-mode'))moveSelection(group);
+  moveIndicator();
  }
- // #060 Segment highlight follows the selected radio without replacing native inputs.
- const selections=new Map();
- for(const group of document.querySelectorAll('.ai-options,.prompt-mode')){const marker=document.createElement('i');marker.className='motion-selection';marker.setAttribute('aria-hidden','true');group.append(marker);selections.set(group,marker);group.addEventListener('change',()=>moveSelection(group));}
- function moveSelection(group){const marker=selections.get(group),input=group.querySelector('input:checked');if(!marker||!input)return;const target=input.nextElementSibling,r=target.getBoundingClientRect(),base=group.getBoundingClientRect(),previous=marker.getBoundingClientRect();Object.assign(marker.style,{left:r.left-base.left+'px',top:r.top-base.top+'px',width:r.width+'px',height:r.height+'px'});if(previous.width&&onScreen(group))animate(marker,[{transform:`translate(${previous.left-r.left}px,${previous.top-r.top}px)`},{transform:'translate(0,0)'}]);}
- new ResizeObserver(()=>{moveIndicator();for(const group of selections.keys())moveSelection(group);}).observe($('builder'));
+ // Radio selections use native inputs and CSS on the outer selected card.
+ // The previous floating .motion-selection box tracked the inner span,
+ // obscuring labels on steps 3 and 6.
+ new ResizeObserver(moveIndicator).observe($('builder'));
  // #006 / #159: visual hints only, never input values. No validation while typing.
  const hints={purpose:'夜、暗くなったら自動で光るライトを作りたい',behavior:'暗くなったらライトがつく。明るくなったら消える'};
  const typing=new Map();
@@ -120,7 +119,7 @@ export function initMotion(){
   const panel=$(id),direction=Number(id.slice(4))>=Number(previous.slice(4))?1:-1;
   animate(panel,[{transform:`translateX(${direction*22}px)`,opacity:.45},{transform:'translateX(0)',opacity:1}]);
   if(focus)window.scrollTo({top:0,behavior:enabled()?'smooth':'instant'});
-  requestAnimationFrame(()=>{startHint(id==='step1'?'purpose':id==='step5'?'behavior':'');moveIndicator();for(const group of selections.keys())moveSelection(group);});
+  requestAnimationFrame(()=>{startHint(id==='step1'?'purpose':id==='step5'?'behavior':'');moveIndicator();});
  }
  // #049 Native dialog: built-in focus containment and Escape, default is cancel.
  const dialog=document.createElement('dialog');dialog.id='reset-dialog';dialog.setAttribute('aria-labelledby','reset-dialog-title');dialog.innerHTML='<form method="dialog"><h2 id="reset-dialog-title">このブラウザに保存した入力と指示文を消しますか？</h2><div class="motion-dialog-actions"><button value="cancel" autofocus>やめる</button><button value="reset">すべてリセット</button></div></form>';document.body.append(dialog);
