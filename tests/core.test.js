@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DEVICES,findDevice} from '../data/devices.js';
-import {emptyState,sampleState,wateringSampleState,validate,generatePrompt,restoreState,inputSignature,makeItem} from '../core.js';
+import {emptyState,sampleState,wateringSampleState,validate,generatePrompt,restoreState,inputSignature,makeItem,composeBehaviorGuide,emptyBehaviorGuide} from '../core.js';
 const valid=()=>({...emptyState(),purpose:'温度を知らせる',behavior:'温度が高くなったら画面に表示する'});
 test('SとAを別々に管理し、装置設定に必要な接続仕様がある',()=>{assert.equal(DEVICES.length,16);for(const d of DEVICES){assert.ok(['S','A'].includes(d.group));assert.equal(d.builtIn,d.fields.length===0);assert.ok(d.support);}assert.equal(findDevice('distance').fields.filter(f=>f.kind==='pin').length,2);assert.equal(findDevice('scale').fields.filter(f=>f.sharing==='i2c').length,2);});
 test('必須項目が不足すると生成しない',()=>{assert.equal(validate(emptyState()).errors.length,2);assert.throws(()=>generatePrompt(emptyState()));});
@@ -66,4 +66,27 @@ test('水やりサンプルは指定端子と自動・手動給水、人がい�
  assert.deepEqual(s.actuators.map(i=>[i.deviceId,i.connections.signal]),[['pump','P2'],['led',undefined]]);
  const p=generatePrompt(s);for(const text of ['10％未満','1分間（60秒）','60mL','10秒間','10mL','Aボタン','ONのときだけ','0から100','OFFのときはLEDをすべて消灯','人がいなくても','重複して実行しない','校正値','次の自動給水を許可する条件'])assert.ok(p.includes(text),text);
  const r=restoreState(JSON.stringify(s));assert.equal(r.behavior,s.behavior);assert.deepEqual(r.sensors.map(i=>i.connections),s.sensors.map(i=>i.connections));
+});
+
+test('入力補助は必須2項目と任意の停止・再動作条件を丁寧にまとめる',()=>{
+ const blank=emptyBehaviorGuide();
+ assert.deepEqual(blank,{start:'',action:'',stop:'',restart:''});
+ assert.equal(composeBehaviorGuide(blank),'');
+ assert.equal(composeBehaviorGuide({...blank,start:'猫が来たとき'}),'');
+ const g={start:' 猫が来たとき ',action:'ポンプを動かす',stop:'50gで止める',restart:'猫がいったん離れたら'};
+ assert.equal(composeBehaviorGuide(g),['【開始条件】猫が来たとき','【行う動作】ポンプを動かす','【停止条件】50gで止める','【再動作条件】猫がいったん離れたら'].join('\\n'));
+ assert.equal(composeBehaviorGuide({...g,stop:'',restart:''}).split('\\n').length,2);
+});
+test('入力補助は保存されるが、反映する前の生成文や旧保存を変更しない',()=>{
+ const s=valid(),sig=inputSignature(s),original=generatePrompt(s);
+ s.behaviorGuide={start:'ボタンが押されたら',action:'LEDを点灯',stop:'',restart:''};
+ assert.equal(inputSignature(s),sig);
+ assert.equal(generatePrompt(s),original);
+ const restored=restoreState(JSON.stringify(s));
+ assert.deepEqual(restored.behaviorGuide,s.behaviorGuide);
+ const legacy={...s};delete legacy.behaviorGuide;
+ assert.deepEqual(restoreState(JSON.stringify(legacy)).behaviorGuide,emptyBehaviorGuide());
+ s.behavior=composeBehaviorGuide(s.behaviorGuide);
+ assert.notEqual(inputSignature(s),sig);
+ assert.match(generatePrompt(s),/【開始条件】/);
 });
