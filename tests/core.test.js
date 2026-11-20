@@ -74,8 +74,8 @@ test('入力補助は必須2項目と任意の停止・再動作条件を丁寧�
  assert.equal(composeBehaviorGuide(blank),'');
  assert.equal(composeBehaviorGuide({...blank,start:'猫が来たとき'}),'');
  const g={start:' 猫が来たとき ',action:'ポンプを動かす',stop:'50gで止める',restart:'猫がいったん離れたら'};
- assert.equal(composeBehaviorGuide(g),['【開始条件】猫が来たとき','【行う動作】ポンプを動かす','【停止条件】50gで止める','【再動作条件】猫がいったん離れたら'].join('\\n'));
- assert.equal(composeBehaviorGuide({...g,stop:'',restart:''}).split('\\n').length,2);
+ assert.equal(composeBehaviorGuide(g),['【開始条件】猫が来たとき','【行う動作】ポンプを動かす','【停止条件】50gで止める','【再動作条件】猫がいったん離れたら'].join('\n'));
+ assert.equal(composeBehaviorGuide({...g,stop:'',restart:''}).split('\n').length,2);
 });
 test('入力補助は保存されるが、反映する前の生成文や旧保存を変更しない',()=>{
  const s=valid(),sig=inputSignature(s),original=generatePrompt(s);
