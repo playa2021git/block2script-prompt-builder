@@ -11,7 +11,7 @@ const page=await context.newPage(),errors=[],external=[];
 context.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));page.on('pageerror',e=>errors.push(e.message));
 context.on('request',r=>{if(!r.url().startsWith(new URL(base).origin))external.push(r.url());});
 await mkdir('work',{recursive:true});
-async function go(p,n){const link=p.locator(`.step-nav a[href="#step${n}"]`);await link.focus();await link.press("Enter");await p.locator(`#step${n}`).waitFor({state:"visible",timeout:6000});assert.equal(await p.locator("#builder > .card:visible").count(),1);}
+async function go(p,n){await p.locator(`.step-nav a[href="#step${n}"]`).click();assert.equal(await p.locator("#builder > .card:visible").count(),1);}
 
 try{
  await page.goto(base);await page.waitForSelector('#sensor-choice optgroup',{state:'attached'});
@@ -158,15 +158,15 @@ try{
  const speechContext=await browser.newContext({viewport:{width:1366,height:768}});
  speechContext.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));
  const speech=await speechContext.newPage();await speech.goto(base);
- assert.equal(await speech.locator('.nav-required[data-step="step1"]').isVisible(),true);
- assert.equal(await speech.locator('.nav-required[data-step="step5"]').isVisible(),true);
+ assert.match(await speech.locator("#progress-guide").textContent(),/2件/);
+ assert.match(await speech.locator("#preflight-title").textContent(),/必要な入力/);
  await go(speech,6);
  assert.match(await speech.locator('#preflight-message').textContent(),/2件/);
  assert.equal(await speech.locator('.preflight-link').count(),2);
  await speech.locator('.preflight-link').first().click();
  assert.equal(await speech.locator('#step1').isVisible(),true);
  await speech.locator('#purpose').fill('音声で歴史用語のページを探す');
- assert.equal(await speech.locator('.nav-required[data-step="step1"]').isVisible(),false);
+ assert.match(await speech.locator("#progress-guide").textContent(),/1件/);
  await go(speech,3);
  assert.match(await speech.locator('label:has([name="ai-mode"][value="sound"])').textContent(),/音の分類/);
  assert.match(await speech.locator('label:has([name="ai-mode"][value="speech"])').textContent(),/音声認識/);
@@ -180,7 +180,7 @@ try{
  assert.match(await speech.locator('#preflight-message').textContent(),/1件/);
  await go(speech,5);
  await speech.locator('#behavior').fill('話した用語の文字列を、用語とページ番号の対応表と照合して表示する。');
- assert.equal(await speech.locator('.nav-required[data-step="step5"]').isVisible(),false);
+ assert.match(await speech.locator("#progress-guide").textContent(),/必須の入力はそろいました/);
  await speech.locator('#behavior').blur();
  await speech.locator('#next-step').scrollIntoViewIfNeeded();
  await speech.waitForTimeout(200);
@@ -198,7 +198,7 @@ try{
  await speech.locator('[name=ai-mode][value=sound]').check();
  assert.equal(await speech.locator('#ai-fields').isVisible(),true);
  assert.equal(await speech.locator('#speech-fields').isVisible(),false);
- assert.equal(await speech.locator('.nav-required[data-step="step3"]').isVisible(),true);
+ assert.match(await speech.locator("#progress-guide").textContent(),/入力の確認が必要/);
  await speech.screenshot({path:'work/sound-classification-vs-speech.png',animations:'disabled',fullPage:true});
  await speechContext.close();
  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);

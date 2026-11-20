@@ -153,7 +153,7 @@ function renderReadiness(){
   marker.textContent=incomplete?'要入力':'';
  });
  const progress=$('progress-guide');
- if(issues.length){progress.textContent='確認する入力：'+issues.length+'件（未入力の項目は赤い目印）';progress.classList.add('needs-input');}
+ if(issues.length){progress.textContent='入力の確認が必要：'+issues.length+'件（詳細は最後のステップで確認できます）';progress.classList.add('needs-input');}
  else{progress.textContent='✓ 必須の入力はそろいました';progress.classList.remove('needs-input');}
  const preflight=$('preflight'),message=$('preflight-message'),list=$('preflight-list');
  preflight.classList.toggle('ready',issues.length===0);
