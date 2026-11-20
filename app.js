@@ -100,9 +100,10 @@ function renderBehaviorGuide(){
  if(!guide.action?.trim())missing.push('②行う動作');
  const needsStop=state.actuators.some(item=>['pump','servo','vibrator'].includes(item.deviceId));
  const notes=[];
- if(missing.length)notes.push('説明文にまとめるには'+missing.join('・')+'を書こう。');
- if(needsStop&&!guide.stop?.trim())notes.push('ポンプ・モーターなどの停止条件と安全対策を考えよう。');
- if(needsStop&&!guide.restart?.trim())notes.push('連続動作を防ぐ再動作条件も確認しよう。');
+ const started=guideKeys.some(k=>guide[k]?.trim());
+ if(started&&missing.length)notes.push('説明文にまとめるには'+missing.join('・')+'を書こう。');
+ if(started&&needsStop&&!guide.stop?.trim())notes.push('ポンプ・モーターなどの停止条件と安全対策を考えよう。');
+ if(started&&needsStop&&!guide.restart?.trim())notes.push('連続動作を防ぐ再動作条件も確認しよう。');
  warn.hidden=!notes.length;
  warn.textContent=notes.join(' ');
 }
