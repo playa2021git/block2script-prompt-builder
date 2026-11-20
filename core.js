@@ -2,7 +2,16 @@ import {findDevice,AI_MODES} from './data/devices.js';
 export const PROMPT_MODES={auto:'AIにおまかせ',precise:'自分で細かく決める'};
 export const promptMode=s=>typeof s.promptMode==='string'&&Object.hasOwn(PROMPT_MODES,s.promptMode)?s.promptMode:'auto';
 export const STORAGE_KEY='b2s-prompt-maker-v1';
-export const emptyState=()=>({version:1,promptMode:'auto',purpose:'',sensors:[],actuators:[],ai:{mode:'none',classes:'',url:''},behavior:'',prompt:'',signature:''});
+export const emptyBehaviorGuide=()=>({start:'',action:'',stop:'',restart:''});
+export function composeBehaviorGuide(g){
+ const t=k=>typeof g?.[k]==='string'?g[k].trim():'';
+ if(!t('start')||!t('action'))return '';
+ const lines=[`【開始条件】${t('start')}`,`【行う動作】${t('action')}`];
+ if(t('stop'))lines.push(`【停止条件】${t('stop')}`);
+ if(t('restart'))lines.push(`【再動作条件】${t('restart')}`);
+ return lines.join('\n');
+}
+export const emptyState=()=>({version:1,promptMode:'auto',purpose:'',sensors:[],actuators:[],ai:{mode:'none',classes:'',url:''},behavior:'',behaviorGuide:emptyBehaviorGuide(),prompt:'',signature:''});
 export const inputSignature=s=>JSON.stringify(['device-settings-v2',s.purpose,s.sensors,s.actuators,s.ai,s.behavior,promptMode(s)]);
 export const makeItem=(deviceId,id)=>({id,deviceId,connections:{},note:''});
 export function sampleState(){
@@ -31,7 +40,7 @@ export function restoreState(raw){
  try{const x=JSON.parse(raw);if(x?.version!==1||!Array.isArray(x.sensors)||!Array.isArray(x.actuators))return null;
  const text=v=>typeof v==='string'?v:'';const s=emptyState();
  const items=(arr,group)=>arr.filter(i=>i&&findDevice(i.deviceId)?.group===group&&typeof i.id==='string').map((i,index)=>({id:group+'-'+index,deviceId:i.deviceId,connections:Object.fromEntries(Object.entries(i.connections??{}).filter(([k,v])=>findDevice(i.deviceId).fields.some(f=>f.key===k)&&typeof v==='string')),note:text(i.note)}));
- s.promptMode=promptMode(x);s.sensors=items(x.sensors,'S');s.actuators=items(x.actuators,'A');s.purpose=text(x.purpose);s.behavior=text(x.behavior);s.ai={mode:Object.hasOwn(AI_MODES,x.ai?.mode)?x.ai.mode:'none',classes:text(x.ai?.classes),url:text(x.ai?.url)};s.prompt=text(x.prompt);
+ s.promptMode=promptMode(x);s.sensors=items(x.sensors,'S');s.actuators=items(x.actuators,'A');s.purpose=text(x.purpose);s.behavior=text(x.behavior);s.behaviorGuide=Object.fromEntries(Object.keys(emptyBehaviorGuide()).map(k=>[k,text(x.behaviorGuide?.[k])]));s.ai={mode:Object.hasOwn(AI_MODES,x.ai?.mode)?x.ai.mode:'none',classes:text(x.ai?.classes),url:text(x.ai?.url)};s.prompt=text(x.prompt);
  // IDs are internal and may change while restoring. Keep the edited prompt only when inputs match.
  s.signature=typeof x.promptMode==='string'&&Object.hasOwn(PROMPT_MODES,x.promptMode)&&x.signature===inputSignature(x)?inputSignature(s):'';return s;
  }catch{return null;}
