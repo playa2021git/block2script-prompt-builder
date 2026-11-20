@@ -1,6 +1,6 @@
 import {initMotion} from './motion.js?v=selection-fix-1';
-import {DEVICES,AI_MODES,findDevice} from './data/devices.js';
-import {STORAGE_KEY,emptyState,sampleState,wateringSampleState,restoreState,makeItem,validate,generatePrompt,inputSignature,composeBehaviorGuide} from './core.js';
+import {DEVICES,AI_MODES,findDevice} from './data/devices.js?v=speech-guide-1';
+import {STORAGE_KEY,emptyState,sampleState,wateringSampleState,restoreState,makeItem,validate,generatePrompt,inputSignature,composeBehaviorGuide} from './core.js?v=speech-guide-1';
 const imagePath=id=>`./assets/devices/${id}.svg`;
 const $=id=>document.getElementById(id);
 let state=emptyState(),saveTimer,storageAvailable=true;
@@ -10,7 +10,7 @@ const motion=initMotion();
 try{const saved=localStorage.getItem(STORAGE_KEY);if(saved){const restored=restoreState(saved);if(restored){state=restored;$('save-status').textContent='前回の入力を復元しました';}else $('save-status').textContent='保存内容を読み取れません。新しく入力できます。';}}catch{storageAvailable=false;$('save-status').textContent='このブラウザでは保存できません。再読み込みに注意。';}
 const el=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;};
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));storageAvailable=true;$('save-status').textContent='このブラウザに保存しました';}catch{storageAvailable=false;$('save-status').textContent='保存できません。再読み込み前に指示文をコピーしよう。';}},200);}
-function changed(){save();updateResult();renderEquipment();$('action-status').textContent='';$('action-status').classList.remove('success-notice');$('validation').hidden=true;for(const node of document.querySelectorAll('[aria-invalid]'))node.removeAttribute('aria-invalid');motion.sync(state,activeStep);}
+function changed(){save();updateResult();renderEquipment();renderReadiness();$('action-status').textContent='';$('action-status').classList.remove('success-notice');$('validation').hidden=true;for(const node of document.querySelectorAll('[aria-invalid]'))node.removeAttribute('aria-invalid');motion.sync(state,activeStep);}
 function updateResult(){const stale=!!state.prompt&&state.signature!==inputSignature(state);$('result').hidden=!state.prompt&&!state.signature;$('stale').hidden=!stale;$('copy').disabled=stale||!state.prompt.trim();}
 function fillChoices(id,group){const select=$(id);select.replaceChildren(el('option',null,'装置を選ぼう'));select.firstChild.value='';for(const [builtIn,label]of [[true,'micro:bit内蔵'],[false,'外付け']]){const optgroup=el('optgroup');optgroup.label=label;for(const d of DEVICES.filter(d=>d.group===group&&d.builtIn===builtIn)){const option=el('option',null,d.name+(d.status==='unverified'?'〈対応要確認〉':''));option.value=d.id;optgroup.append(option);}select.append(optgroup);}}
 function deviceImage(d,className=''){
@@ -87,7 +87,7 @@ function renderList(key,group){const list=$(key==='sensors'?'sensor-list':'actua
  if(d.note)article.append(el('p','device-note',d.note));const memoId=item.id+'-note',memoLabel=el('label','memo-label','この装置のメモ（分かれば）');memoLabel.htmlFor=memoId;const memo=el('input','device-memo');memo.type='text';memo.id=memoId;memo.placeholder=d.memoPlaceholder??'例：この装置で何を調べるか、何を動かすか。';memo.value=item.note;memo.addEventListener('input',()=>{item.note=memo.value;changed();});article.append(memoLabel,memo);list.append(article);
  });
 }
-function renderAI(){const mode=state.ai.mode;$('ai-fields').hidden=mode==='none';$('ai-support').textContent=AI_MODES[mode]?.support??'';$('class-count').textContent=(state.ai.classes?state.ai.classes.split(/\r?\n/).filter(c=>c.trim()).length:0)+'クラス';for(const input of document.querySelectorAll('[name=ai-mode]'))input.checked=input.value===mode;}
+function renderAI(){const mode=state.ai.mode;$('ai-fields').hidden=!['image','sound','pose'].includes(mode);$('speech-fields').hidden=mode!=='speech';$('ai-support').textContent=AI_MODES[mode]?.support??'';$('class-count').textContent=(state.ai.classes?state.ai.classes.split(/\r?\n/).filter(c=>c.trim()).length:0)+'クラス';for(const input of document.querySelectorAll('[name=ai-mode]'))input.checked=input.value===mode;}
 const guideKeys=['start','action','stop','restart'];
 function renderBehaviorGuide(){
  const guide=state.behaviorGuide??{};
@@ -107,7 +107,7 @@ function renderBehaviorGuide(){
  warn.hidden=!notes.length;
  warn.textContent=notes.join(' ');
 }
-function render(){for(const radio of document.querySelectorAll('[name=prompt-mode]'))radio.checked=radio.value===state.promptMode;fillChoices('sensor-choice','S');fillChoices('actuator-choice','A');$('purpose').value=state.purpose;$('behavior').value=state.behavior;for(const key of guideKeys)$('guide-'+key).value=state.behaviorGuide?.[key]??'';renderBehaviorGuide();$('behavior-guide-status').textContent='';$('classes').value=state.ai.classes;$('model-url').value=state.ai.url;$('prompt').value=state.prompt;renderList('sensors','S');renderList('actuators','A');renderAI();updateResult();renderEquipment();motion.sync(state,activeStep);}
+function render(){for(const radio of document.querySelectorAll('[name=prompt-mode]'))radio.checked=radio.value===state.promptMode;fillChoices('sensor-choice','S');fillChoices('actuator-choice','A');$('purpose').value=state.purpose;$('behavior').value=state.behavior;for(const key of guideKeys)$('guide-'+key).value=state.behaviorGuide?.[key]??'';renderBehaviorGuide();$('behavior-guide-status').textContent='';$('classes').value=state.ai.classes;$('model-url').value=state.ai.url;$('prompt').value=state.prompt;renderList('sensors','S');renderList('actuators','A');renderAI();updateResult();renderEquipment();renderReadiness();motion.sync(state,activeStep);}
 for(const [id,key]of [['purpose','purpose'],['behavior','behavior']])$(id).addEventListener('input',()=>{state[key]=$(id).value;changed();});
 for(const key of guideKeys)$('guide-'+key).addEventListener('input',()=>{
  state.behaviorGuide[key]=$('guide-'+key).value;
@@ -131,6 +131,46 @@ for(const [button,select,key,group]of [['add-sensor','sensor-choice','sensors','
 $('sample').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力を既製品「夜間防犯ライト」の設定に置き換えますか？'))return;state=sampleState();editing.sensors='sample-pir';editing.actuators='sample-led';render();goStep('step1',false);changed();$('action-status').textContent='既製品「夜間防犯ライト」を読み込みました。人感センサの端子を、実際の接続に合わせて選ぼう。';$('purpose').focus();motion.sample();});
 $('sample-watering').addEventListener('click',()=>{if((state.purpose||state.sensors.length||state.actuators.length||state.behavior||state.ai.mode!=='none')&&!confirm('今の入力をサンプル②「自動観葉植物水やり装置」の設定に置き換えますか？'))return;state=wateringSampleState();editing.sensors='watering-soil';editing.actuators='watering-pump';render();goStep('step1',false);changed();$('action-status').textContent='サンプル②「自動観葉植物水やり装置」を読み込みました。人感P0・土壌水分P1・ポンプP2です。';$('purpose').focus();motion.sample();});
 $('reset').addEventListener('click',async()=>{if(!await motion.confirmReset())return;clearTimeout(saveTimer);state=emptyState();render();goStep('step1',false);$('validation').hidden=true;try{localStorage.removeItem(STORAGE_KEY);$('save-status').textContent='保存した入力を消しました';}catch{$('save-status').textContent='保存内容を消せませんでした。ブラウザの設定を確認しよう。';}$('action-status').textContent='入力を消しました。新しいアイデアを書いてみよう。';$('purpose').focus();motion.reset();});
+function renderReadiness(){
+ const issues=validate(state).errors;
+ const stageFor=issue=>{
+  const t=issue.target;
+  if(t==='purpose')return 'step1';
+  if(t==='behavior')return 'step5';
+  if(['ai-mode','classes','model-url'].includes(t))return 'step3';
+  if(t?.startsWith('item-'))return state.sensors.some(item=>'item-'+item.id===t)?'step2':'step4';
+  return 'step6';
+ };
+ const grouped=new Map();
+ for(const issue of issues){
+  const step=stageFor(issue);
+  if(!grouped.has(step))grouped.set(step,[]);
+  grouped.get(step).push(issue);
+ }
+ document.querySelectorAll('.nav-required').forEach(marker=>{
+  const incomplete=grouped.has(marker.dataset.step);
+  marker.hidden=!incomplete;
+  marker.textContent=incomplete?'要入力':'';
+ });
+ const progress=$('progress-guide');
+ if(issues.length){progress.textContent='確認する入力：'+issues.length+'件（未入力の項目は赤い目印）';progress.classList.add('needs-input');}
+ else{progress.textContent='✓ 必須の入力はそろいました';progress.classList.remove('needs-input');}
+ const preflight=$('preflight'),message=$('preflight-message'),list=$('preflight-list');
+ preflight.classList.toggle('ready',issues.length===0);
+ message.textContent=issues.length?'入力が必要な項目が'+issues.length+'件あります。下の項目を押すと、その入力場所に戻れます。':'✓ 必須項目がそろいました。「指示文をつくる」に進めます。';
+ list.replaceChildren();
+ for(const issue of issues){
+  const step=stageFor(issue);
+  const button=el('button','preflight-link',issue.message);
+  button.type='button';
+  button.addEventListener('click',()=>{
+   const target=issue.target==='ai-mode'?document.querySelector('[name=ai-mode]:checked'):$(issue.target);
+   if(target)revealTarget(target);
+   else goStep(step);
+  });
+  list.append(button);
+ }
+}
 function showIssues(result){const container=$('validation');container.replaceChildren();for(const [items,title,warning]of [[result.errors,'入力・接続を確認してから、もう一度つくろう',false],[result.warnings.filter(w=>['missing-model','duplicate'].includes(w.kind)),'入力・登録の確認（未入力でも指示文は作れます）',true],[result.warnings.filter(w=>!['missing-model','duplicate'].includes(w.kind)),'先生・実機での確認（指示文にも入ります）',true]]){if(!items.length)continue;const box=el('div',warning?'issues warning':'issues'),ul=el('ul');box.append(el('p',null,title));for(const issue of items){const li=el('li'),link=el('a',null,issue.message);link.href='#'+issue.target;link.addEventListener('click',e=>{e.preventDefault();const target=issue.target==='ai-mode'?document.querySelector('[name=ai-mode]:checked'):$(issue.target);if(target)revealTarget(target);});li.append(link);ul.append(li);if(!warning){const node=$(issue.target);if(node)node.setAttribute('aria-invalid','true');}}box.append(ul);container.append(box);}container.hidden=!result.errors.length&&!result.warnings.length;}
 $('builder').addEventListener('submit',e=>{e.preventDefault();$('action-status').classList.remove('success-notice');if(activeStep!=='step6')return;clearTimeout(saveTimer);const result=validate(state);showIssues(result);motion.validate();if(result.errors.length){$('action-status').textContent=`まだ指示文をつくれません。${result.errors.length}件の入力を確認しよう。`;$('validation').focus();return;}if(state.prompt&&state.signature===inputSignature(state)&&$('prompt').value!==generatePrompt(state)&&!confirm('手直しした指示文を、入力からつくり直しますか？'))return;state.prompt=generatePrompt(state);state.signature=inputSignature(state);$('prompt').value=state.prompt;updateResult();save();$('action-status').textContent=result.warnings.length?'確認が必要なことを含めて、指示文をつくりました。内容を読んでからコピーしよう。':'指示文をつくりました。内容を読んで、専用Gemへコピーしよう。';motion.sync(state,activeStep);motion.generated();playCue($('result'),'result-ready');$('result').scrollIntoView({block:'nearest'});});
 $('prompt').addEventListener('input',()=>{$('action-status').classList.remove('success-notice');state.prompt=$('prompt').value;save();updateResult();motion.sync(state,activeStep);$('action-status').textContent='指示文を手直ししています。';});
@@ -186,7 +226,7 @@ function renderEquipment(){
   row.append(el('b',null,label),el('span',null,text));row.title=text;overview.append(row);
  }
  const aiOverview=el('div','overview-row');
- const aiText=state.ai.mode==='none'?'使わない':AI_MODES[state.ai.mode].name+' · '+JSON.stringify(state.ai.classes.split(/\r?\n/));
+ const aiText=state.ai.mode==='none'?'使わない':state.ai.mode==='speech'?AI_MODES.speech.name+'（Class名・TMモデル不要）':AI_MODES[state.ai.mode].name+' · '+JSON.stringify(state.ai.classes.split(/\r?\n/));
  aiOverview.append(el('b',null,'AI'),el('span',null,aiText));aiOverview.title=aiText;overview.append(aiOverview);
 
  for(const [key,group] of [['sensors','S'],['actuators','A']]){
@@ -222,15 +262,21 @@ function renderEquipment(){
  const ai=$('equipped-ai');ai.replaceChildren();
  if(state.ai.mode==='none')ai.append(el('p','equipment-empty','AIは使わない'));
  else{
-  const card=el('article','equipment-item ai-equipment-item'),img=el('img','equipment-thumbnail');
-  img.src='./assets/devices/ai-'+state.ai.mode+'.webp';img.alt='';
-  const top=el('div','equipment-item-top');top.append(img,el('b',null,AI_MODES[state.ai.mode].name));card.append(top);
-  card.append(el('p','equipment-classes',state.ai.classes?JSON.stringify(state.ai.classes.split(/\r?\n/)):'Class名は未設定'));
+  const card=el('article','equipment-item ai-equipment-item'),top=el('div','equipment-item-top');
+  if(state.ai.mode==='speech')top.append(el('span','speech-equipment-icon','🎙️'));
+  else{const img=el('img','equipment-thumbnail');img.src='./assets/devices/ai-'+state.ai.mode+'.webp';img.alt='';top.append(img);}
+  top.append(el('b',null,AI_MODES[state.ai.mode].name));card.append(top);
   const aiErrors=result.errors.filter(e=>['ai-mode','classes','model-url'].includes(e.target));
-  card.append(el('span',aiErrors.length||!state.ai.url?'equipment-status incomplete':'equipment-status complete',aiErrors.length?'✎ 入力が必要（Class・URL）':!state.ai.url?'✎ 入力が必要（モデルURL未入力）':'✓ 設定完了（入力済み）'));
-  if(state.ai.mode==='pose')card.append(el('p','equipment-note','B2S対応要確認 · ポーズ認識の連携は未確認'));
-  if(aiErrors.length)for(const issue of aiErrors)card.append(el('p','equipment-input-help',issue.message));
-  if(!state.ai.url)card.append(el('p','equipment-note','実際のモデルURLを入力するか、認識に必要ならGemで確認してください。未入力でも指示文は作れます。'));
+  if(state.ai.mode==='speech'){
+    card.append(el('p','equipment-note','Speech2Scratch：音声を文字データに変換。Class名とTMモデルは不要です。'));
+    card.append(el('span','equipment-status complete','✓ 音声文字変換を選択済み'));
+  }else{
+    card.append(el('p','equipment-classes',state.ai.classes?JSON.stringify(state.ai.classes.split(/\r?\n/)):'Class名は未設定'));
+    card.append(el('span',aiErrors.length||!state.ai.url?'equipment-status incomplete':'equipment-status complete',aiErrors.length?'✎ 入力が必要（Class・URL）':!state.ai.url?'✎ モデルURL未入力（必要なら確認）':'✓ 設定完了（入力済み）'));
+    if(state.ai.mode==='pose')card.append(el('p','equipment-note','B2S対応要確認 · ポーズ認識の連携は未確認'));
+    if(aiErrors.length)for(const issue of aiErrors)card.append(el('p','equipment-input-help',issue.message));
+    if(!state.ai.url)card.append(el('p','equipment-note','認識に必要な場合は実際のモデルURLを確認してください。未入力でも指示文は作れます。'));
+  }
   const actions=el('div','equipment-actions ai-actions'),edit=el('button','ai-edit','編集'),remove=el('button',null,'外す');
   edit.type=remove.type='button';edit.setAttribute('aria-label','AIの設定を編集');remove.setAttribute('aria-label','AIを外す');
   edit.addEventListener('click',()=>goStep('step3'));
