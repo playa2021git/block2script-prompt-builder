@@ -1662,3 +1662,10 @@ footer b {
  .step-nav .progress-guide{margin:9px 4px 7px;padding:7px 8px;line-height:1.35;font-size:12px}
 }
 @media(max-width:900px){.step-nav{max-height:none;overflow:visible}}
+
+/* Preserve original sidebar geometry; show early required-input status above the workbench. */
+.step-nav{max-height:none!important;overflow:visible!important}
+.step-nav nav>a{min-height:50px!important;padding:12px 8px!important;flex-wrap:nowrap!important}
+.workshop-title .progress-guide{display:inline-block;max-width:100%;margin:9px 0 0;padding:7px 12px;border:1px solid #80bda7;border-radius:9px;background:#e9f7ef;color:#20513c;font-size:14px;line-height:1.5;font-weight:800}
+.workshop-title .progress-guide.needs-input{border-color:#daa46d;background:#fff1dd;color:#774015}
+@media(max-width:600px){.workshop-title .progress-guide{font-size:13px;width:100%}}
